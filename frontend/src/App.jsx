@@ -8,6 +8,7 @@ import {
   FlaskConical,
   BookOpen,
   Settings,
+  Radar,
 } from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import ChartView from "./components/ChartView";
@@ -15,6 +16,7 @@ import ScannerPanel from "./components/ScannerPanel";
 import CourseNotes from "./components/CourseNotes";
 import Journal from "./components/Journal";
 import BacktestLab from "./components/BacktestLab";
+import IntelPage from "./components/IntelPage";
 import SettingsPage from "./components/Settings";
 import Login from "./components/Login";
 import { checkSession, checkSetup } from "./services/passkey";
@@ -24,6 +26,7 @@ const navItems = [
   { to: "/chart", icon: BarChart3, label: "Chart" },
   { to: "/scanner", icon: ScanSearch, label: "Scan" },
   { to: "/journal", icon: ClipboardList, label: "Journal" },
+  { to: "/intel", icon: Radar, label: "Intel" },
   { to: "/backtest", icon: FlaskConical, label: "Lab" },
   { to: "/notes", icon: BookOpen, label: "Notes" },
   { to: "/settings", icon: Settings, label: "Settings" },
@@ -55,11 +58,21 @@ export default function App() {
 
   if (authState === "loading") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center animate-pulse">
-          <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
-            <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
-          </svg>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 26 26" fill="none">
+              <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
+            </svg>
+          </div>
+          {/* Pulse ring */}
+          <div className="absolute inset-0 rounded-2xl bg-accent/20 animate-ping" />
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold tracking-tight">
+            Automate<span className="text-accent">Ascension</span>
+          </div>
+          <div className="text-xs text-muted mt-1 animate-pulse">Loading dashboard...</div>
         </div>
       </div>
     );
@@ -125,6 +138,7 @@ export default function App() {
           <Route path="/chart/:symbol" element={<ChartView />} />
           <Route path="/scanner" element={<ScannerPanel />} />
           <Route path="/journal" element={<Journal />} />
+          <Route path="/intel" element={<IntelPage />} />
           <Route path="/backtest" element={<BacktestLab />} />
           <Route path="/notes" element={<CourseNotes />} />
           <Route path="/settings" element={<SettingsPage />} />
@@ -132,17 +146,15 @@ export default function App() {
       </main>
 
       {/* Bottom nav — mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-border flex justify-around items-center py-3 px-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-border flex justify-around items-center h-16 px-2 z-50">
         {navItems.slice(0, 5).map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-1 transition-all duration-200 ${
-                isActive
-                  ? "text-accent"
-                  : "text-muted"
+              `flex flex-col items-center justify-center w-14 h-12 transition-all duration-200 ${
+                isActive ? "text-accent" : "text-muted"
               }`
             }
           >
@@ -153,10 +165,10 @@ export default function App() {
                     <Icon size={20} className="text-black" strokeWidth={2.5} />
                   </div>
                 ) : (
-                  <Icon size={20} strokeWidth={1.5} />
-                )}
-                {!isActive && (
-                  <span className="text-[10px] font-medium">{label}</span>
+                  <>
+                    <Icon size={20} strokeWidth={1.5} />
+                    <span className="text-[10px] font-medium mt-1">{label}</span>
+                  </>
                 )}
               </>
             )}

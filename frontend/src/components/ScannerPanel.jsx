@@ -78,7 +78,7 @@ export default function ScannerPanel() {
         <button
           onClick={handleScan}
           disabled={loading}
-          className="accent-btn flex items-center gap-2 text-sm disabled:opacity-50"
+          className="accent-btn flex items-center gap-2 text-sm whitespace-nowrap disabled:opacity-50"
         >
           <Play size={16} />
           {loading ? "Scanning..." : "Run Scan"}

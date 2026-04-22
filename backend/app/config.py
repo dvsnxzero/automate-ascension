@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-me-in-production"
 
+    # Market Intelligence APIs (free tiers)
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    finnhub_api_key: str = ""
+
     # App
     environment: str = "development"
     allowed_origins: str = "http://localhost:5173,http://localhost:8000"

@@ -14,6 +14,8 @@ from app.trade.routes import router as trade_router
 from app.strategy.routes import router as strategy_router
 from app.auth.routes import router as auth_router
 from app.auth.passkey import router as passkey_router
+from app.journal.routes import router as journal_router
+from app.intel.routes import router as intel_router
 
 
 # ─── Auth middleware ───
@@ -103,6 +105,8 @@ app.include_router(passkey_router, prefix="/api/auth", tags=["passkey"])
 app.include_router(market_router, prefix="/api/market", tags=["market"])
 app.include_router(trade_router, prefix="/api/trade", tags=["trade"])
 app.include_router(strategy_router, prefix="/api/strategy", tags=["strategy"])
+app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
+app.include_router(intel_router, prefix="/api/intel", tags=["intel"])
 
 
 # Health check

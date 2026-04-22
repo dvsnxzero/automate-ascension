@@ -42,6 +42,30 @@ export const runScorecard = (input) => api.post("/strategy/scorecard", input);
 export const runScan = (type, config = {}) =>
   api.post(`/strategy/scan/${type}`, config);
 
+// --- Journal ---
+export const getOrders = (params = {}) => api.get("/journal/orders", { params });
+export const syncOrders = () => api.post("/journal/orders/sync");
+export const getTrades = (params = {}) => api.get("/journal/trades", { params });
+export const createTrade = (trade) => api.post("/journal/trades", trade);
+export const updateTrade = (id, data) => api.patch(`/journal/trades/${id}`, data);
+export const getTradeStats = (params = {}) => api.get("/journal/stats", { params });
+export const getBalance = (params = {}) => api.get("/journal/balance", { params });
+export const snapshotBalance = () => api.post("/journal/balance/snapshot");
+export const getSignals = (params = {}) => api.get("/journal/signals", { params });
+export const createSignal = (signal) => api.post("/journal/signals", signal);
+
+// --- Intel (Market Intelligence) ---
+export const scrapeReddit = (params = {}) => api.post("/intel/reddit/scrape", null, { params });
+export const searchReddit = (query, params = {}) => api.post("/intel/reddit/search", null, { params: { query, ...params } });
+export const getRedditFeed = (params = {}) => api.get("/intel/reddit/feed", { params });
+export const fetchNews = (params = {}) => api.post("/intel/news/fetch", null, { params });
+export const getNewsFeed = (params = {}) => api.get("/intel/news/feed", { params });
+export const getSymbolSentiment = (symbol) => api.get(`/intel/news/sentiment/${symbol}`);
+export const getIntelDashboard = (params = {}) => api.get("/intel/dashboard", { params });
+export const getMarketEvents = (params = {}) => api.get("/intel/events", { params });
+export const createMarketEvent = (event) => api.post("/intel/events", event);
+export const takeSentimentSnapshot = (bucket = "hourly") => api.post("/intel/snapshot", null, { params: { bucket } });
+
 // --- Health ---
 export const healthCheck = () => api.get("/health");
 

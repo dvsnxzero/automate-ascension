@@ -186,3 +186,123 @@ class StrategySignal(Base):
     acted_on: Mapped[bool] = mapped_column(Boolean, default=False)  # did we trade on this signal?
     order_id: Mapped[int | None] = mapped_column(Integer)  # FK to orders.id if acted on
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ═══════════════════════════════════════════════
+# Market Intelligence — Reddit, News, Events, Sentiment
+# ═══════════════════════════════════════════════
+
+class RedditPost(Base):
+    """Reddit posts from market-relevant subreddits."""
+    __tablename__ = "reddit_posts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    reddit_id: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    subreddit: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str | None] = mapped_column(Text)
+    author: Mapped[str | None] = mapped_column(String(100))
+    url: Mapped[str | None] = mapped_column(Text)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    num_comments: Mapped[int] = mapped_column(Integer, default=0)
+    upvote_ratio: Mapped[float | None] = mapped_column(Float)
+    # AI-extracted fields
+    symbols_mentioned: Mapped[str | None] = mapped_column(Text)  # comma-separated: AAPL,TSLA
+    sentiment_score: Mapped[float | None] = mapped_column(Float)  # -1.0 to 1.0
+    sentiment_label: Mapped[str | None] = mapped_column(String(20))  # bullish/bearish/neutral
+    relevance_score: Mapped[float | None] = mapped_column(Float)  # 0-1, how market-relevant
+    tags: Mapped[str | None] = mapped_column(Text)  # comma-separated: trump,tariff,earnings
+    ai_summary: Mapped[str | None] = mapped_column(Text)
+    # Timestamps
+    posted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    scraped_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class NewsArticle(Base):
+    """Financial news articles from Finnhub and other sources."""
+    __tablename__ = "news_articles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_id: Mapped[str | None] = mapped_column(String(100), unique=True)  # dedupe key
+    source: Mapped[str] = mapped_column(String(50), nullable=False)  # finnhub, reddit, rss
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    image_url: Mapped[str | None] = mapped_column(Text)
+    # AI-extracted fields
+    symbols: Mapped[str | None] = mapped_column(Text, index=True)  # comma-separated
+    sentiment_score: Mapped[float | None] = mapped_column(Float)  # -1.0 to 1.0
+    sentiment_label: Mapped[str | None] = mapped_column(String(20))
+    category: Mapped[str | None] = mapped_column(String(50))  # earnings, policy, tariff, macro, crypto
+    tags: Mapped[str | None] = mapped_column(Text)
+    ai_summary: Mapped[str | None] = mapped_column(Text)
+    # Timestamps
+    published_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    scraped_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class MarketEvent(Base):
+    """
+    Cataloged market-moving events — Trump announcements, earnings surprises,
+    policy changes, etc. Links to the posts/articles that reported them and
+    tracks market reaction timing + impact.
+    """
+    __tablename__ = "market_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # trump_announcement, tariff, earnings, fed_rate, policy, macro, scandal, ipo
+    severity: Mapped[int] = mapped_column(Integer, default=5)  # 1-10
+    # Symbols affected
+    symbols_affected: Mapped[str | None] = mapped_column(Text)  # comma-separated
+    sectors_affected: Mapped[str | None] = mapped_column(Text)
+    # Market reaction tracking
+    reaction_time_mins: Mapped[int | None] = mapped_column(Integer)  # how fast market moved
+    market_direction: Mapped[str | None] = mapped_column(String(10))  # UP / DOWN / FLAT
+    spy_change_pct: Mapped[float | None] = mapped_column(Float)  # S&P 500 move
+    vix_change_pct: Mapped[float | None] = mapped_column(Float)
+    top_mover_symbol: Mapped[str | None] = mapped_column(String(20))
+    top_mover_pct: Mapped[float | None] = mapped_column(Float)
+    # Potential profit analysis
+    best_entry_time: Mapped[str | None] = mapped_column(String(50))  # "2 mins after announcement"
+    best_exit_time: Mapped[str | None] = mapped_column(String(50))
+    max_profit_pct: Mapped[float | None] = mapped_column(Float)
+    optimal_strategy: Mapped[str | None] = mapped_column(Text)  # what would have worked
+    # Source references
+    source_reddit_ids: Mapped[str | None] = mapped_column(Text)  # comma-separated
+    source_news_ids: Mapped[str | None] = mapped_column(Text)  # comma-separated
+    # AI analysis
+    ai_analysis: Mapped[str | None] = mapped_column(Text)  # full AI breakdown
+    pattern_tags: Mapped[str | None] = mapped_column(Text)  # tariff_reversal, rate_cut, etc.
+    # Timestamps
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    detected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    intel_created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SentimentSnapshot(Base):
+    """
+    Periodic sentiment aggregation — overall market mood from Reddit + news.
+    One row per time bucket (e.g., hourly during market hours).
+    """
+    __tablename__ = "sentiment_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    bucket: Mapped[str] = mapped_column(String(10), nullable=False)  # hourly / daily
+    # Aggregate scores
+    reddit_sentiment: Mapped[float | None] = mapped_column(Float)  # -1.0 to 1.0
+    news_sentiment: Mapped[float | None] = mapped_column(Float)
+    combined_sentiment: Mapped[float | None] = mapped_column(Float)
+    # Volume of data
+    reddit_post_count: Mapped[int] = mapped_column(Integer, default=0)
+    news_article_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Top mentions
+    top_symbols: Mapped[str | None] = mapped_column(Text)  # JSON array
+    top_topics: Mapped[str | None] = mapped_column(Text)  # JSON array
+    # Market context at snapshot time
+    spy_price: Mapped[float | None] = mapped_column(Float)
+    vix_level: Mapped[float | None] = mapped_column(Float)
+    snapshot_created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
