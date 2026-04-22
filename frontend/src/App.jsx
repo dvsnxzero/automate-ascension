@@ -32,6 +32,16 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
+// Mobile bottom nav — show these 6 items (skip Lab and Notes, accessible from sidebar on desktop)
+const mobileNavItems = [
+  { to: "/", icon: LayoutDashboard, label: "Home" },
+  { to: "/chart", icon: BarChart3, label: "Chart" },
+  { to: "/scanner", icon: ScanSearch, label: "Scan" },
+  { to: "/journal", icon: ClipboardList, label: "Journal" },
+  { to: "/intel", icon: Radar, label: "Intel" },
+  { to: "/settings", icon: Settings, label: "Settings" },
+];
+
 export default function App() {
   const [authState, setAuthState] = useState("loading"); // loading | login | authenticated
   const [isSetup, setIsSetup] = useState(false);
@@ -147,7 +157,7 @@ export default function App() {
 
       {/* Bottom nav — mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-border flex justify-around items-center h-16 px-2 z-50">
-        {navItems.slice(0, 5).map(({ to, icon: Icon, label }) => (
+        {mobileNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

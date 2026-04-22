@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Fingerprint, KeyRound, ShieldCheck, AlertCircle, Copy } from "lucide-react";
+import { Fingerprint, KeyRound, ShieldCheck, AlertCircle, Copy, Smartphone, ArrowRight } from "lucide-react";
 import {
   startRegistration,
   startAuthentication,
@@ -7,12 +7,13 @@ import {
 } from "../services/passkey";
 
 export default function Login({ isSetup, onAuthenticated }) {
-  const [mode, setMode] = useState(isSetup ? "login" : "setup"); // setup | login | backup
+  const [mode, setMode] = useState(isSetup ? "login" : "setup"); // setup | login | backup | register-device
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [backupCodes, setBackupCodes] = useState(null); // shown once after setup
   const [backupInput, setBackupInput] = useState("");
   const [codesCopied, setCodesCopied] = useState(false);
+  const [deviceRegistered, setDeviceRegistered] = useState(false);
 
   const handlePasskeySetup = async () => {
     setError(null);
@@ -49,13 +50,24 @@ export default function Login({ isSetup, onAuthenticated }) {
     setError(null);
     setLoading(true);
     try {
-      const result = await authWithBackupCode(backupInput.trim());
-      if (result.remaining_codes <= 2) {
-        alert(`Warning: Only ${result.remaining_codes} backup codes remaining. Register a new passkey soon.`);
-      }
-      onAuthenticated();
+      await authWithBackupCode(backupInput.trim());
+      // Authenticated — offer to register this device
+      setMode("register-device");
     } catch (err) {
       setError(err?.response?.data?.detail || "Invalid code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterDevice = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await startRegistration();
+      setDeviceRegistered(true);
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || "Registration failed — you can add this device later in Settings.");
     } finally {
       setLoading(false);
     }
@@ -150,6 +162,65 @@ export default function Login({ isSetup, onAuthenticated }) {
           <p className="text-muted/50 text-xs text-center mt-4">
             Uses Face ID, Touch ID, or Windows Hello
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Register device (after backup code login) ───
+  if (mode === "register-device") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center">
+              <Smartphone size={32} className="text-black" />
+            </div>
+            <h1 className="text-2xl font-black mb-2">
+              {deviceRegistered ? "Device Registered!" : "Add This Device"}
+            </h1>
+            <p className="text-muted text-sm">
+              {deviceRegistered
+                ? "Face ID / Touch ID is now set up. You won't need a backup code next time."
+                : "Register a passkey so you can use Face ID or Touch ID next time."}
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-bear/10 border border-bear/20 rounded-xl p-3 mb-4 flex items-center gap-2 text-bear text-sm">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+
+          {!deviceRegistered ? (
+            <>
+              <button
+                onClick={handleRegisterDevice}
+                disabled={loading}
+                className="w-full accent-btn flex items-center justify-center gap-3 py-4 text-base disabled:opacity-50"
+              >
+                <Fingerprint size={22} />
+                {loading ? "Registering..." : "Register Passkey"}
+              </button>
+
+              <button
+                onClick={onAuthenticated}
+                className="w-full ghost-btn mt-3 flex items-center justify-center gap-2 text-sm"
+              >
+                Skip for now
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onAuthenticated}
+              className="w-full accent-btn flex items-center justify-center gap-3 py-4 text-base"
+            >
+              Continue to Dashboard
+              <ArrowRight size={18} />
+            </button>
+          )}
         </div>
       </div>
     );
