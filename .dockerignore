@@ -1,0 +1,15 @@
+# Dependencies (platform-specific binaries)
+frontend/node_modules
+backend/__pycache__
+backend/app/__pycache__
+backend/app/**/__pycache__
+
+# Dev / local files
+.git
+.env
+.env.*
+*.pyc
+__pycache__
+.vscode
+.idea
+*.md
