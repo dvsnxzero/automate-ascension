@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ascension
+      POSTGRES_USER: ascension
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://ascension:localdev@db:5432/ascension
+      ENVIRONMENT: production
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

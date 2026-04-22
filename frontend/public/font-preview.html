@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Font Pairing Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800;900&family=VT323&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&family=DotGothic16&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #fff;
+      padding: 40px;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #666;
+      margin-bottom: 40px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .card {
+      background: #111;
+      border: 1px solid #2A2A2A;
+      border-radius: 20px;
+      padding: 32px;
+      transition: border-color 0.2s;
+    }
+    .card:hover {
+      border-color: #DCFC36;
+    }
+    .option-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #DCFC36;
+      margin-bottom: 24px;
+    }
+    .font-names {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .divider {
+      height: 1px;
+      background: #2A2A2A;
+      margin: 20px 0;
+    }
+    .portfolio-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    .portfolio-value {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 4px;
+    }
+    .stock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #1A1A1A;
+    }
+    .stock-row:last-child { border-bottom: none; }
+    .stock-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .stock-price {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .stock-change {
+      font-size: 12px;
+      color: #DCFC36;
+      font-weight: 600;
+    }
+    .accent-pill {
+      display: inline-block;
+      background: rgba(220, 252, 54, 0.1);
+      color: #DCFC36;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .btn {
+      display: inline-block;
+      background: #DCFC36;
+      color: #000;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      margin-top: 16px;
+    }
+    .mono-sample {
+      font-size: 13px;
+      color: #999;
+      margin-top: 8px;
+    }
+    .section-label {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    /* Option A */
+    .option-a .portfolio-label,
+    .option-a .font-names { font-family: 'Space Grotesk', sans-serif; }
+    .option-a .portfolio-value { font-family: 'Space Mono', monospace; }
+    .option-a .stock-name,
+    .option-a .section-label,
+    .option-a .btn { font-family: 'Space Grotesk', sans-serif; }
+    .option-a .stock-price,
+    .option-a .stock-change,
+    .option-a .accent-pill { font-family: 'Space Mono', monospace; }
+    .option-a .mono-sample { font-family: 'Space Mono', monospace; }
+
+    /* Option B */
+    .option-b .portfolio-label,
+    .option-b .font-names { font-family: 'Inter', sans-serif; }
+    .option-b .portfolio-value { font-family: 'VT323', monospace; font-size: 56px; font-weight: 400; letter-spacing: 2px; }
+    .option-b .stock-name,
+    .option-b .section-label,
+    .option-b .btn { font-family: 'Inter', sans-serif; }
+    .option-b .stock-price,
+    .option-b .stock-change,
+    .option-b .accent-pill { font-family: 'VT323', monospace; font-size: 18px; }
+    .option-b .mono-sample { font-family: 'VT323', monospace; font-size: 18px; }
+
+    /* Option C */
+    .option-c .portfolio-label,
+    .option-c .font-names { font-family: 'Outfit', sans-serif; }
+    .option-c .portfolio-value { font-family: 'JetBrains Mono', monospace; }
+    .option-c .stock-name,
+    .option-c .section-label,
+    .option-c .btn { font-family: 'Outfit', sans-serif; }
+    .option-c .stock-price,
+    .option-c .stock-change,
+    .option-c .accent-pill { font-family: 'JetBrains Mono', monospace; }
+    .option-c .mono-sample { font-family: 'JetBrains Mono', monospace; }
+
+    /* Option D */
+    .option-d .portfolio-label,
+    .option-d .font-names { font-family: 'Sora', sans-serif; }
+    .option-d .portfolio-value { font-family: 'DotGothic16', monospace; font-size: 48px; letter-spacing: 1px; }
+    .option-d .stock-name,
+    .option-d .section-label,
+    .option-d .btn { font-family: 'Sora', sans-serif; }
+    .option-d .stock-price,
+    .option-d .stock-change,
+    .option-d .accent-pill { font-family: 'DotGothic16', monospace; font-size: 16px; }
+    .option-d .mono-sample { font-family: 'DotGothic16', monospace; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>ZipTrader — Font Pairing Preview</h1>
+  <div class="grid">
+
+    <!-- OPTION A -->
+    <div class="card option-a">
+      <div class="option-label">Option A — Clean + Pixel</div>
+      <div class="font-names">Space Grotesk + Space Mono</div>
+      <div class="divider"></div>
+      <div class="portfolio-label">Portfolio overview</div>
+      <div class="portfolio-value">$12,345.67</div>
+      <div class="accent-pill">+8.73%</div>
+      <div class="divider"></div>
+      <div class="section-label">Portfolio positions</div>
+      <div class="stock-row">
+        <span class="stock-name">Apple</span>
+        <span class="stock-price">273.25</span>
+        <span class="stock-change">+8.73%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Tesla</span>
+        <span class="stock-price">367.67</span>
+        <span class="stock-change">+4.62%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Google</span>
+        <span class="stock-price">491.24</span>
+        <span class="stock-change">+0.94%</span>
+      </div>
+      <div class="mono-sample">SMA(9) RSI(14) MACD(12,26,9)</div>
+      <button class="btn">Run Scanner</button>
+    </div>
+
+    <!-- OPTION B -->
+    <div class="card option-b">
+      <div class="option-label">Option B — Sharp + Retro Terminal</div>
+      <div class="font-names">Inter + VT323</div>
+      <div class="divider"></div>
+      <div class="portfolio-label">Portfolio overview</div>
+      <div class="portfolio-value">$12,345.67</div>
+      <div class="accent-pill">+8.73%</div>
+      <div class="divider"></div>
+      <div class="section-label">Portfolio positions</div>
+      <div class="stock-row">
+        <span class="stock-name">Apple</span>
+        <span class="stock-price">273.25</span>
+        <span class="stock-change">+8.73%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Tesla</span>
+        <span class="stock-price">367.67</span>
+        <span class="stock-change">+4.62%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Google</span>
+        <span class="stock-price">491.24</span>
+        <span class="stock-change">+0.94%</span>
+      </div>
+      <div class="mono-sample">SMA(9) RSI(14) MACD(12,26,9)</div>
+      <button class="btn">Run Scanner</button>
+    </div>
+
+    <!-- OPTION C -->
+    <div class="card option-c">
+      <div class="option-label">Option C — Bold + Futuristic Mono</div>
+      <div class="font-names">Outfit + JetBrains Mono</div>
+      <div class="divider"></div>
+      <div class="portfolio-label">Portfolio overview</div>
+      <div class="portfolio-value">$12,345.67</div>
+      <div class="accent-pill">+8.73%</div>
+      <div class="divider"></div>
+      <div class="section-label">Portfolio positions</div>
+      <div class="stock-row">
+        <span class="stock-name">Apple</span>
+        <span class="stock-price">273.25</span>
+        <span class="stock-change">+8.73%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Tesla</span>
+        <span class="stock-price">367.67</span>
+        <span class="stock-change">+4.62%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Google</span>
+        <span class="stock-price">491.24</span>
+        <span class="stock-change">+0.94%</span>
+      </div>
+      <div class="mono-sample">SMA(9) RSI(14) MACD(12,26,9)</div>
+      <button class="btn">Run Scanner</button>
+    </div>
+
+    <!-- OPTION D -->
+    <div class="card option-d">
+      <div class="option-label">Option D — Editorial + Dot Matrix</div>
+      <div class="font-names">Sora + DotGothic16</div>
+      <div class="divider"></div>
+      <div class="portfolio-label">Portfolio overview</div>
+      <div class="portfolio-value">$12,345.67</div>
+      <div class="accent-pill">+8.73%</div>
+      <div class="divider"></div>
+      <div class="section-label">Portfolio positions</div>
+      <div class="stock-row">
+        <span class="stock-name">Apple</span>
+        <span class="stock-price">273.25</span>
+        <span class="stock-change">+8.73%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Tesla</span>
+        <span class="stock-price">367.67</span>
+        <span class="stock-change">+4.62%</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Google</span>
+        <span class="stock-price">491.24</span>
+        <span class="stock-change">+0.94%</span>
+      </div>
+      <div class="mono-sample">SMA(9) RSI(14) MACD(12,26,9)</div>
+      <button class="btn">Run Scanner</button>
+    </div>
+
+  </div>
+</body>
+</html>
