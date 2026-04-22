@@ -34,10 +34,10 @@ export default function App() {
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8 px-2">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-black font-black text-sm">Z</span>
+            <span className="text-black font-black text-sm">A</span>
           </div>
           <span className="text-lg font-bold tracking-tight">
-            Zip<span className="text-accent">Trader</span>
+            Automate<span className="text-accent"> Ascension</span>
           </span>
         </div>
 
