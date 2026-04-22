@@ -107,7 +107,7 @@ export default function SettingsPage() {
       <section className="card p-6">
         <h2 className="text-base font-bold mb-2">About</h2>
         <p className="text-sm text-muted">
-          Automate Ascension v0.1.0 — Built with ZipTrader U strategies, React,
+          AutomateAscension v0.1.0 — Built with ZipTrader U strategies, React,
           FastAPI, and the Webull Open API.
         </p>
       </section>

@@ -37,7 +37,7 @@ export default function App() {
             <span className="text-black font-black text-sm">A</span>
           </div>
           <span className="text-lg font-bold tracking-tight">
-            Automate<span className="text-accent"> Ascension</span>
+            Automate<span className="text-accent">Ascension</span>
           </span>
         </div>
 
