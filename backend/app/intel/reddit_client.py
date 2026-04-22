@@ -1,6 +1,8 @@
 """
 Reddit market intelligence scraper.
-Uses PRAW (free tier: 100 req/min) to pull posts from trading subreddits.
+Uses Reddit's public JSON endpoints — no API key needed.
+Appending .json to any Reddit URL returns structured data.
+Rate limit: ~30 req/min unauthenticated (plenty for our use case).
 """
 
 import re
@@ -8,10 +10,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-import praw
-from praw.models import Submission
-
-from app.config import get_settings
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +48,15 @@ NOISE_WORDS = {
     "WSB", "LMAO", "LMFAO", "WTF", "OMG", "PUMP", "DUMP",
 }
 
-
-def get_reddit() -> praw.Reddit:
-    """Create authenticated Reddit client."""
-    settings = get_settings()
-    return praw.Reddit(
-        client_id=settings.reddit_client_id,
-        client_secret=settings.reddit_client_secret,
-        user_agent="AutomateAscension/0.1 (market intelligence bot)",
-    )
+# Shared httpx client with Reddit-friendly headers
+_client = httpx.Client(
+    headers={
+        "User-Agent": "AutomateAscension/0.1 (market intelligence scraper)",
+        "Accept": "application/json",
+    },
+    timeout=15.0,
+    follow_redirects=True,
+)
 
 
 def extract_tickers(text: str) -> list[str]:
@@ -71,6 +70,32 @@ def extract_tickers(text: str) -> list[str]:
     return sorted(tickers)
 
 
+def _parse_post(post_data: dict) -> dict:
+    """Parse a Reddit JSON post object into our standard format."""
+    data = post_data.get("data", post_data)
+
+    title = data.get("title", "")
+    body = data.get("selftext", "") or ""
+    full_text = f"{title} {body}"
+    tickers = extract_tickers(full_text)
+
+    created_utc = data.get("created_utc", 0)
+
+    return {
+        "reddit_id": data.get("id", ""),
+        "subreddit": data.get("subreddit", ""),
+        "title": title,
+        "body": body[:5000],  # cap body size
+        "author": data.get("author", "[deleted]"),
+        "url": f"https://reddit.com{data.get('permalink', '')}",
+        "score": data.get("score", 0),
+        "num_comments": data.get("num_comments", 0),
+        "upvote_ratio": data.get("upvote_ratio", 0),
+        "symbols_mentioned": ",".join(tickers) if tickers else None,
+        "posted_at": datetime.fromtimestamp(created_utc, tz=timezone.utc) if created_utc else None,
+    }
+
+
 def scrape_subreddit(
     subreddit_name: str,
     sort: str = "hot",
@@ -78,44 +103,31 @@ def scrape_subreddit(
     time_filter: str = "day",
 ) -> list[dict]:
     """
-    Scrape posts from a subreddit.
-    Returns list of dicts ready for DB insertion.
+    Scrape posts from a subreddit using public JSON endpoints.
+    e.g., https://www.reddit.com/r/wallstreetbets/hot.json?limit=25
     """
-    reddit = get_reddit()
-    sub = reddit.subreddit(subreddit_name)
+    params = {"limit": min(limit, 100), "raw_json": 1}
+    if sort == "top":
+        params["t"] = time_filter
 
-    if sort == "hot":
-        posts = sub.hot(limit=limit)
-    elif sort == "new":
-        posts = sub.new(limit=limit)
-    elif sort == "top":
-        posts = sub.top(time_filter=time_filter, limit=limit)
-    elif sort == "rising":
-        posts = sub.rising(limit=limit)
-    else:
-        posts = sub.hot(limit=limit)
+    url = f"https://www.reddit.com/r/{subreddit_name}/{sort}.json"
 
+    try:
+        resp = _client.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch r/{subreddit_name}/{sort}: {e}")
+        return []
+
+    posts = data.get("data", {}).get("children", [])
     results = []
     for post in posts:
-        if post.stickied:
+        if post.get("data", {}).get("stickied"):
             continue
-
-        full_text = f"{post.title} {post.selftext or ''}"
-        tickers = extract_tickers(full_text)
-
-        results.append({
-            "reddit_id": post.id,
-            "subreddit": subreddit_name,
-            "title": post.title,
-            "body": (post.selftext or "")[:5000],  # cap body size
-            "author": str(post.author) if post.author else "[deleted]",
-            "url": f"https://reddit.com{post.permalink}",
-            "score": post.score,
-            "num_comments": post.num_comments,
-            "upvote_ratio": post.upvote_ratio,
-            "symbols_mentioned": ",".join(tickers) if tickers else None,
-            "posted_at": datetime.fromtimestamp(post.created_utc, tz=timezone.utc),
-        })
+        parsed = _parse_post(post)
+        if parsed["reddit_id"]:
+            results.append(parsed)
 
     return results
 
@@ -144,30 +156,31 @@ def search_reddit(
     limit: int = 25,
 ) -> list[dict]:
     """Search Reddit for specific topics (e.g., 'trump tariff')."""
-    reddit = get_reddit()
+    sub_path = f"r/{subreddit}" if subreddit else "r/all"
+    url = f"https://www.reddit.com/{sub_path}/search.json"
 
-    if subreddit:
-        sub = reddit.subreddit(subreddit)
-    else:
-        sub = reddit.subreddit("all")
+    params = {
+        "q": query,
+        "sort": sort,
+        "t": time_filter,
+        "limit": min(limit, 100),
+        "restrict_sr": 1 if subreddit else 0,
+        "raw_json": 1,
+    }
 
+    try:
+        resp = _client.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.error(f"Reddit search failed for '{query}': {e}")
+        return []
+
+    posts = data.get("data", {}).get("children", [])
     results = []
-    for post in sub.search(query, sort=sort, time_filter=time_filter, limit=limit):
-        full_text = f"{post.title} {post.selftext or ''}"
-        tickers = extract_tickers(full_text)
-
-        results.append({
-            "reddit_id": post.id,
-            "subreddit": str(post.subreddit),
-            "title": post.title,
-            "body": (post.selftext or "")[:5000],
-            "author": str(post.author) if post.author else "[deleted]",
-            "url": f"https://reddit.com{post.permalink}",
-            "score": post.score,
-            "num_comments": post.num_comments,
-            "upvote_ratio": post.upvote_ratio,
-            "symbols_mentioned": ",".join(tickers) if tickers else None,
-            "posted_at": datetime.fromtimestamp(post.created_utc, tz=timezone.utc),
-        })
+    for post in posts:
+        parsed = _parse_post(post)
+        if parsed["reddit_id"]:
+            results.append(parsed)
 
     return results

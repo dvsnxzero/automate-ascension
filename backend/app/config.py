@@ -13,9 +13,8 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-me-in-production"
 
-    # Market Intelligence APIs (free tiers)
-    reddit_client_id: str = ""
-    reddit_client_secret: str = ""
+    # Market Intelligence APIs
+    # Reddit: no key needed — uses public JSON endpoints
     finnhub_api_key: str = ""
 
     # App

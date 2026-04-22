@@ -10,8 +10,7 @@ python-jose[cryptography]>=3.3
 httpx>=0.27
 python-multipart>=0.0.9
 webauthn>=2.0
-praw>=7.7
 finnhub-python>=2.4
 
 # No Webull SDK dependency — webull_client.py uses pure httpx
-# This avoids the grpcio==1.51.1 build failure on modern macOS/Python
+# No PRAW dependency — reddit_client.py uses public JSON endpoints (no API key needed)
