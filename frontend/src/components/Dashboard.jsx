@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [positions, setPositions] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
+  const [timeRange, setTimeRange] = useState("1M");
 
   useEffect(() => {
     healthCheck()
@@ -100,11 +101,12 @@ export default function Dashboard() {
 
       {/* Time range selector */}
       <div className="flex gap-2 mb-6">
-        {["1W", "1M", "6M", "1Y"].map((range, i) => (
+        {["1W", "1M", "6M", "1Y"].map((range) => (
           <button
             key={range}
+            onClick={() => setTimeRange(range)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-              i === 1
+              timeRange === range
                 ? "bg-accent text-black"
                 : "bg-surface border border-border text-muted hover:text-white hover:border-border-light"
             }`}

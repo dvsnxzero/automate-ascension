@@ -136,7 +136,7 @@ export default function ChartView() {
           </button>
         </div>
 
-        <form onSubmit={handleSearch} className="flex gap-2 md:ml-auto">
+        <form onSubmit={handleSearch} className="flex flex-wrap gap-2 md:ml-auto">
           <div className="relative">
             <Search
               size={16}
@@ -150,7 +150,7 @@ export default function ChartView() {
               className="bg-surface border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-accent/50 w-44 transition-colors"
             />
           </div>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {["1m", "5m", "15m", "1h", "1d", "1w"].map((int) => (
               <button
                 key={int}

@@ -28,7 +28,7 @@ const navItems = [
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-black text-white flex">
+    <div className="min-h-screen bg-black text-white flex overflow-x-hidden max-w-full">
       {/* Sidebar — desktop */}
       <nav className="hidden md:flex flex-col w-60 bg-black border-r border-border p-5 gap-1">
         {/* Logo */}
@@ -69,7 +69,7 @@ export default function App() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto min-w-0">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/chart" element={<ChartView />} />
