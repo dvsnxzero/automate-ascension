@@ -66,6 +66,12 @@ export const getMarketEvents = (params = {}) => api.get("/intel/events", { param
 export const createMarketEvent = (event) => api.post("/intel/events", event);
 export const takeSentimentSnapshot = (bucket = "hourly") => api.post("/intel/snapshot", null, { params: { bucket } });
 
+// --- Course Notes ---
+export const getModules = () => api.get("/notes/modules");
+export const getLessons = (moduleSlug) => api.get(`/notes/modules/${moduleSlug}/lessons`);
+export const getLesson = (moduleSlug, filename) => api.get(`/notes/modules/${moduleSlug}/lessons/${filename}`);
+export const searchNotes = (query) => api.get("/notes/search", { params: { q: query } });
+
 // --- Health ---
 export const healthCheck = () => api.get("/health");
 

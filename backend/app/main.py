@@ -18,6 +18,7 @@ from app.auth.routes import router as auth_router
 from app.auth.passkey import router as passkey_router
 from app.journal.routes import router as journal_router
 from app.intel.routes import router as intel_router
+from app.notes.routes import router as notes_router
 
 
 # ─── Auth middleware ───
@@ -122,6 +123,7 @@ app.include_router(trade_router, prefix="/api/trade", tags=["trade"])
 app.include_router(strategy_router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(intel_router, prefix="/api/intel", tags=["intel"])
+app.include_router(notes_router, prefix="/api/notes", tags=["notes"])
 
 
 # ─── Build version ───
