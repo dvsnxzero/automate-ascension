@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Routes, Route, NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,6 +16,8 @@ import CourseNotes from "./components/CourseNotes";
 import Journal from "./components/Journal";
 import BacktestLab from "./components/BacktestLab";
 import SettingsPage from "./components/Settings";
+import Login from "./components/Login";
+import { checkSession, checkSetup } from "./services/passkey";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Home" },
@@ -27,6 +30,50 @@ const navItems = [
 ];
 
 export default function App() {
+  const [authState, setAuthState] = useState("loading"); // loading | login | authenticated
+  const [isSetup, setIsSetup] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Check if already logged in
+        const session = await checkSession();
+        if (session.authenticated) {
+          setAuthState("authenticated");
+          return;
+        }
+
+        // Check if passkeys are set up
+        const setup = await checkSetup();
+        setIsSetup(setup.is_setup);
+        setAuthState("login");
+      } catch {
+        setAuthState("login");
+      }
+    })();
+  }, []);
+
+  if (authState === "loading") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center animate-pulse">
+          <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
+            <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  if (authState === "login") {
+    return (
+      <Login
+        isSetup={isSetup}
+        onAuthenticated={() => setAuthState("authenticated")}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex overflow-x-hidden max-w-full">
       {/* Sidebar — desktop */}
@@ -34,7 +81,9 @@ export default function App() {
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8 px-2">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-black font-black text-sm">A</span>
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
+            </svg>
           </div>
           <span className="text-lg font-bold tracking-tight">
             Automate<span className="text-accent">Ascension</span>
@@ -82,7 +131,7 @@ export default function App() {
         </Routes>
       </main>
 
-      {/* Bottom nav — mobile (matches design reference: 4 icons, centered active) */}
+      {/* Bottom nav — mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-border flex justify-around items-center py-3 px-2 z-50">
         {navItems.slice(0, 5).map(({ to, icon: Icon, label }) => (
           <NavLink

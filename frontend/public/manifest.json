@@ -1,10 +1,16 @@
 {
-  "name": "Automate Ascension",
+  "name": "AutomateAscension",
   "short_name": "Ascension",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "description": "Personal trading dashboard — Automate Ascension",
-  "icons": []
+  "description": "Personal trading dashboard — AutomateAscension",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
 }

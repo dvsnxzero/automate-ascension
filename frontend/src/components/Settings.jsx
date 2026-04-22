@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAuthStatus, reconnect } from "../services/api";
-import { RefreshCw } from "lucide-react";
+import { logout } from "../services/passkey";
+import { RefreshCw, LogOut, Fingerprint } from "lucide-react";
 
 export default function SettingsPage() {
   const [authStatus, setAuthStatus] = useState(null);
@@ -100,6 +101,27 @@ export default function SettingsPage() {
               className="bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors"
             />
           </div>
+        </div>
+      </section>
+
+      {/* Security */}
+      <section className="card p-6 mb-4">
+        <h2 className="text-base font-bold mb-4">Security</h2>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Fingerprint size={16} className="text-accent" />
+            <span className="text-sm text-muted">Passkey authentication active</span>
+          </div>
+          <button
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+            className="ghost-btn text-sm flex items-center gap-2 w-fit text-bear border-bear/30 hover:border-bear hover:text-bear"
+          >
+            <LogOut size={14} />
+            Sign Out
+          </button>
         </div>
       </section>
 

@@ -77,3 +77,12 @@ body::before {
 .font-tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Hide scrollbar but keep scroll behavior */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

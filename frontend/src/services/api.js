@@ -6,6 +6,7 @@ const api = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
   timeout: 30000, // 30s timeout for scanner operations
+  withCredentials: true, // Send cookies for auth
 });
 
 // --- Auth ---
