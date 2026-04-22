@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import os
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -96,7 +98,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Cache headers for hashed assets (/assets/*)
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """Set aggressive caching for Vite's content-hashed assets."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/assets/"):
+            # Vite hashes filenames → safe to cache for 1 year, immutable
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 # Auth middleware (after CORS so preflight works)
+app.add_middleware(CacheControlMiddleware)
 app.add_middleware(AuthMiddleware)
 
 # API routes
@@ -109,21 +124,53 @@ app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(intel_router, prefix="/api/intel", tags=["intel"])
 
 
-# Health check
+# ─── Build version ───
+# Set at container start time; changes on every deploy
+BUILD_ID = os.environ.get("RAILWAY_DEPLOYMENT_ID", f"local-{int(time.time())}")
+
+
+# Health check — includes build ID so you can verify which deploy is live
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.1.0", "build": BUILD_ID}
 
 
-# Serve React frontend (static files from Vite build)
+# ─── Static file serving with cache control ───
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():
+    # /assets/* — Vite content-hashed filenames → cache forever
     app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        """Serve the React SPA for all non-API routes."""
+        """Serve the React SPA with proper cache headers.
+
+        - index.html → no-cache (always revalidate so new deploys are picked up)
+        - favicon.svg, manifest.json → short cache with revalidation
+        - Other static files → served as-is
+        """
         file_path = static_dir / full_path
+
+        # Serve the matched file or fall back to index.html (SPA routing)
         if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(static_dir / "index.html")
+            response = FileResponse(file_path)
+        else:
+            file_path = static_dir / "index.html"
+            response = FileResponse(file_path)
+
+        # Cache policy based on file type
+        name = file_path.name
+        if name == "index.html":
+            # NEVER cache index.html — it references hashed bundles,
+            # so a stale copy means the browser never loads new code
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        elif name in ("favicon.svg", "favicon.ico", "manifest.json"):
+            # Short cache — revalidate after 1 hour
+            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+        else:
+            # Everything else served from root (not /assets) gets short cache
+            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+
+        return response
