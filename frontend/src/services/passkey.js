@@ -42,7 +42,7 @@ export async function startRegistration() {
   // 3. Create credential via browser
   const credential = await navigator.credentials.create({ publicKey: options });
 
-  // 4. Serialize for the server
+  // 4. Serialize for the server (include transports for cross-device hints)
   const credentialJSON = JSON.stringify({
     id: credential.id,
     rawId: bufferToBase64url(credential.rawId),
@@ -50,6 +50,7 @@ export async function startRegistration() {
     response: {
       attestationObject: bufferToBase64url(credential.response.attestationObject),
       clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+      transports: credential.response.getTransports?.() || [],
     },
   });
 
@@ -83,8 +84,20 @@ export async function startAuthentication() {
     }));
   }
 
-  // 3. Get credential via browser
-  const credential = await navigator.credentials.get({ publicKey: options });
+  // 3. Get credential via browser (triggers Face ID / Touch ID / security key)
+  let credential;
+  try {
+    credential = await navigator.credentials.get({ publicKey: options });
+  } catch (err) {
+    // User cancelled, no matching credential, or timeout
+    if (err.name === "NotAllowedError") {
+      throw new Error("Authentication was cancelled or timed out. Try again, or use a backup code.");
+    }
+    if (err.name === "InvalidStateError") {
+      throw new Error("No matching passkey found on this device. Use a backup code to sign in, then register this device.");
+    }
+    throw err;
+  }
 
   // 4. Serialize
   const credentialJSON = JSON.stringify({

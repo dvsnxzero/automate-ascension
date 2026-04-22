@@ -1,7 +1,97 @@
 import { useState, useEffect } from "react";
 import { getAuthStatus, reconnect } from "../services/api";
-import { logout } from "../services/passkey";
-import { RefreshCw, LogOut, Fingerprint } from "lucide-react";
+import { logout, startRegistration, checkSetup } from "../services/passkey";
+import { RefreshCw, LogOut, Fingerprint, Plus, Smartphone, ShieldCheck } from "lucide-react";
+
+function SecuritySection() {
+  const [setupInfo, setSetupInfo] = useState(null);
+  const [registering, setRegistering] = useState(false);
+  const [regResult, setRegResult] = useState(null);
+  const [regError, setRegError] = useState(null);
+
+  useEffect(() => {
+    checkSetup().then(setSetupInfo).catch(() => {});
+  }, []);
+
+  const handleRegisterDevice = async () => {
+    setRegistering(true);
+    setRegError(null);
+    setRegResult(null);
+    try {
+      const result = await startRegistration();
+      setRegResult(result);
+      // Refresh setup info
+      checkSetup().then(setSetupInfo).catch(() => {});
+    } catch (err) {
+      setRegError(err?.response?.data?.detail || err.message || "Registration failed");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  return (
+    <section className="card p-6 mb-4">
+      <h2 className="text-base font-bold mb-4">Security</h2>
+      <div className="flex flex-col gap-4">
+        {/* Status */}
+        <div className="flex items-center gap-3">
+          <Fingerprint size={16} className="text-accent" />
+          <span className="text-sm text-muted">
+            {setupInfo
+              ? `${setupInfo.has_passkeys} passkey${setupInfo.has_passkeys !== 1 ? "s" : ""} registered · ${setupInfo.has_backup_codes} backup codes remaining`
+              : "Passkey authentication active"}
+          </span>
+        </div>
+
+        {/* Register new device */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleRegisterDevice}
+            disabled={registering}
+            className="accent-btn text-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            {registering ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Smartphone size={14} />
+            )}
+            {registering ? "Registering..." : "Add This Device"}
+          </button>
+
+          <button
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+            className="ghost-btn text-sm flex items-center gap-2 text-bear border-bear/30 hover:border-bear hover:text-bear"
+          >
+            <LogOut size={14} />
+            Sign Out
+          </button>
+        </div>
+
+        {/* Success message */}
+        {regResult && (
+          <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 flex items-center gap-2 text-accent text-sm">
+            <ShieldCheck size={16} />
+            Passkey registered for this device!
+          </div>
+        )}
+
+        {/* Error message */}
+        {regError && (
+          <div className="bg-bear/10 border border-bear/20 rounded-xl p-3 text-bear text-sm">
+            {regError}
+          </div>
+        )}
+
+        <p className="text-xs text-muted">
+          Add passkeys on each device you use. Sign in with a backup code on new devices, then register here.
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export default function SettingsPage() {
   const [authStatus, setAuthStatus] = useState(null);
@@ -105,25 +195,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Security */}
-      <section className="card p-6 mb-4">
-        <h2 className="text-base font-bold mb-4">Security</h2>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Fingerprint size={16} className="text-accent" />
-            <span className="text-sm text-muted">Passkey authentication active</span>
-          </div>
-          <button
-            onClick={async () => {
-              await logout();
-              window.location.reload();
-            }}
-            className="ghost-btn text-sm flex items-center gap-2 w-fit text-bear border-bear/30 hover:border-bear hover:text-bear"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
-        </div>
-      </section>
+      <SecuritySection />
 
       {/* About */}
       <section className="card p-6">

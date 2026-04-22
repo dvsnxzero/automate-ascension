@@ -22,6 +22,9 @@ from webauthn.helpers.structs import (
     ResidentKeyRequirement,
     UserVerificationRequirement,
     AuthenticatorAttachment,
+    PublicKeyCredentialDescriptor,
+    PublicKeyCredentialType,
+    AuthenticatorTransport,
 )
 
 from app.database import get_db
@@ -106,10 +109,14 @@ async def register_begin(request: Request, db: Session = Depends(get_db)):
     """Start passkey registration. Returns challenge for the browser."""
     rp_id = _rp_id(request)
 
-    # Get existing credential IDs to exclude
+    # Get existing credential IDs to exclude (prevent re-registering same key)
     existing = db.query(WebAuthnCredential).all()
     exclude_credentials = [
-        {"id": cred.credential_id, "type": "public-key"}
+        PublicKeyCredentialDescriptor(
+            id=cred.credential_id,
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            transports=[AuthenticatorTransport.INTERNAL, AuthenticatorTransport.HYBRID],
+        )
         for cred in existing
     ]
 
@@ -120,6 +127,8 @@ async def register_begin(request: Request, db: Session = Depends(get_db)):
         user_name="owner",
         user_display_name="Owner",
         authenticator_selection=AuthenticatorSelectionCriteria(
+            # No attachment restriction — allows platform (Touch ID, Face ID)
+            # AND cross-platform (phone-as-key, security keys)
             resident_key=ResidentKeyRequirement.PREFERRED,
             user_verification=UserVerificationRequirement.PREFERRED,
         ),
@@ -218,6 +227,15 @@ async def register_complete(body: RegisterCompleteRequest, request: Request, db:
 @router.post("/passkey/auth/begin")
 async def auth_begin(request: Request, db: Session = Depends(get_db)):
     """Start passkey authentication. Returns challenge."""
+    try:
+        return await _auth_begin_inner(request, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("auth/begin failed")
+        raise HTTPException(status_code=500, detail=f"Auth begin error: {str(e)}")
+
+async def _auth_begin_inner(request: Request, db: Session):
     rp_id = _rp_id(request)
 
     credentials = db.query(WebAuthnCredential).all()
@@ -225,7 +243,11 @@ async def auth_begin(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="No passkeys registered. Set up first.")
 
     allow_credentials = [
-        {"id": cred.credential_id, "type": "public-key"}
+        PublicKeyCredentialDescriptor(
+            id=cred.credential_id,
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            transports=[AuthenticatorTransport.INTERNAL, AuthenticatorTransport.HYBRID],
+        )
         for cred in credentials
     ]
 
