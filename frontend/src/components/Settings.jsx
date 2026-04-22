@@ -1,8 +1,96 @@
 import { useState, useEffect } from "react";
 import { getAuthStatus, reconnect } from "../services/api";
 import { logout, startRegistration, checkSetup } from "../services/passkey";
-import { RefreshCw, LogOut, Fingerprint, Plus, Smartphone, ShieldCheck } from "lucide-react";
+import { useTheme } from "../hooks/useTheme";
+import { getTimeoutMinutes, setTimeoutMinutes } from "../hooks/useSessionTimeout";
+import {
+  RefreshCw,
+  LogOut,
+  Fingerprint,
+  Smartphone,
+  ShieldCheck,
+  Sun,
+  Moon,
+  Monitor,
+  Timer,
+} from "lucide-react";
 
+/* ─── Theme Toggle ───────────────────────── */
+function ThemeSection() {
+  const { preference, resolved, setTheme } = useTheme();
+
+  const options = [
+    { value: "light", icon: Sun, label: "Light" },
+    { value: "dark", icon: Moon, label: "Dark" },
+    { value: "auto", icon: Monitor, label: "Auto" },
+  ];
+
+  return (
+    <section className="card p-6 mb-4">
+      <h2 className="text-base font-bold mb-1">Appearance</h2>
+      <p className="text-xs text-muted mb-4">
+        {preference === "auto"
+          ? `Auto mode — currently ${resolved} (light 6 AM–6 PM, dark 6 PM–6 AM)`
+          : `${resolved.charAt(0).toUpperCase() + resolved.slice(1)} mode active`}
+      </p>
+      <div className="flex gap-2">
+        {options.map(({ value, icon: Icon, label }) => (
+          <button
+            key={value}
+            onClick={() => setTheme(value)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              preference === value
+                ? "bg-accent-bg text-accent border border-accent/30"
+                : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
+            }`}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Session Timeout ────────────────────── */
+function TimeoutSection() {
+  const [minutes, setMinutes] = useState(() => getTimeoutMinutes());
+
+  const presets = [15, 30, 60, 120];
+
+  const handleChange = (mins) => {
+    setMinutes(mins);
+    setTimeoutMinutes(mins);
+  };
+
+  return (
+    <section className="card p-6 mb-4">
+      <h2 className="text-base font-bold mb-1">Session Timeout</h2>
+      <p className="text-xs text-muted mb-4">
+        Auto-logout after {minutes} minutes of inactivity
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {presets.map((mins) => (
+          <button
+            key={mins}
+            onClick={() => handleChange(mins)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              minutes === mins
+                ? "bg-accent-bg text-accent border border-accent/30"
+                : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
+            }`}
+          >
+            <Timer size={14} />
+            {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Security Section ───────────────────── */
 function SecuritySection() {
   const [setupInfo, setSetupInfo] = useState(null);
   const [registering, setRegistering] = useState(false);
@@ -20,7 +108,6 @@ function SecuritySection() {
     try {
       const result = await startRegistration();
       setRegResult(result);
-      // Refresh setup info
       checkSetup().then(setSetupInfo).catch(() => {});
     } catch (err) {
       setRegError(err?.response?.data?.detail || err.message || "Registration failed");
@@ -72,7 +159,7 @@ function SecuritySection() {
 
         {/* Success message */}
         {regResult && (
-          <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 flex items-center gap-2 text-accent text-sm">
+          <div className="bg-accent-bg border border-accent/20 rounded-xl p-3 flex items-center gap-2 text-accent text-sm">
             <ShieldCheck size={16} />
             Passkey registered for this device!
           </div>
@@ -93,6 +180,7 @@ function SecuritySection() {
   );
 }
 
+/* ─── Main Settings Page ─────────────────── */
 export default function SettingsPage() {
   const [authStatus, setAuthStatus] = useState(null);
   const [reconnecting, setReconnecting] = useState(false);
@@ -122,6 +210,12 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto pb-28 md:pb-8">
       <h1 className="text-3xl font-black tracking-tight mb-6">Settings</h1>
+
+      {/* Appearance */}
+      <ThemeSection />
+
+      {/* Session Timeout */}
+      <TimeoutSection />
 
       {/* Webull Connection */}
       <section className="card p-6 mb-4">
@@ -155,7 +249,7 @@ export default function SettingsPage() {
       <section className="card p-6 mb-4">
         <h2 className="text-base font-bold mb-4">Trading Mode</h2>
         <div className="flex gap-3">
-          <button className="bg-accent/10 text-accent border border-accent/30 px-4 py-2.5 rounded-xl text-sm font-semibold">
+          <button className="bg-accent-bg text-accent border border-accent/30 px-4 py-2.5 rounded-xl text-sm font-semibold">
             Paper Trading
           </button>
           <button className="bg-surface border border-border text-muted px-4 py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed opacity-40">
@@ -178,7 +272,7 @@ export default function SettingsPage() {
             <input
               type="number"
               defaultValue={5}
-              className="bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors"
+              className="bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors text-theme-text"
             />
           </div>
           <div>
@@ -188,7 +282,7 @@ export default function SettingsPage() {
             <input
               type="number"
               defaultValue={5}
-              className="bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors"
+              className="bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors text-theme-text"
             />
           </div>
         </div>

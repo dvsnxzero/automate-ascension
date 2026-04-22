@@ -44,7 +44,7 @@ function BalanceChart({ data = [], width = 600, height = 180 }) {
 
   const line = points.map((p) => `${p.x},${p.y}`).join(" ");
   const positive = values[values.length - 1] >= values[0];
-  const color = positive ? "#DCFC36" : "#FF4757";
+  const color = positive ? "var(--color-bull)" : "var(--color-bear)";
 
   // Area fill
   const area = `0,${height} ${line} ${width},${height}`;
@@ -156,11 +156,11 @@ function AddTradeModal({ onClose, onSave }) {
     "bg-surface-light border border-border rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:border-accent/50 transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-bg/60 p-4">
       <div className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold">Log Trade</h2>
-          <button onClick={onClose} className="text-muted hover:text-white">
+          <button onClick={onClose} className="text-muted hover:text-theme-text">
             <X size={18} />
           </button>
         </div>
@@ -500,7 +500,7 @@ function ReflectionRow({ trade, onUpdate }) {
 
             {trade.strategy_name && (
               <div className="mt-3 text-xs text-muted">
-                Strategy: <span className="text-white font-medium">{trade.strategy_name}</span>
+                Strategy: <span className="text-theme-text font-medium">{trade.strategy_name}</span>
                 {trade.scorecard_score != null && (
                   <span className="ml-3">
                     Score: <span className="text-accent font-medium">{trade.scorecard_score}/10</span>
@@ -616,7 +616,7 @@ export default function Journal() {
               className={`px-4 py-2 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                 tab === t.key
                   ? "bg-accent/10 text-accent"
-                  : "text-muted hover:text-white"
+                  : "text-muted hover:text-theme-text"
               }`}
             >
               <t.icon size={13} />
@@ -633,7 +633,7 @@ export default function Journal() {
               className={`px-3 py-2 text-xs font-semibold transition-colors ${
                 period === d
                   ? "bg-accent/10 text-accent"
-                  : "text-muted hover:text-white"
+                  : "text-muted hover:text-theme-text"
               }`}
             >
               {d}D
@@ -678,7 +678,7 @@ function OverviewTab({ stats, balances, trades, period }) {
         <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
           <Target size={24} className="text-accent" />
         </div>
-        <div className="text-white font-semibold mb-2">No trades yet</div>
+        <div className="text-theme-text font-semibold mb-2">No trades yet</div>
         <div className="text-muted text-sm">
           Log your first trade or sync from Webull to see your stats.
         </div>

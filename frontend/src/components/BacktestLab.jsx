@@ -9,7 +9,7 @@ export default function BacktestLab() {
         <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
           <FlaskConical size={28} className="text-accent" />
         </div>
-        <div className="text-white font-semibold mb-2">Coming soon</div>
+        <div className="text-theme-text font-semibold mb-2">Coming soon</div>
         <div className="text-muted text-sm mb-1">
           Test your ZipTrader strategies against historical data.
         </div>

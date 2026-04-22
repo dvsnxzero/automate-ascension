@@ -24,7 +24,7 @@ function Sparkline({ data = [], positive = true, width = 100, height = 40 }) {
     data = pts;
   }
   const points = data.map((p) => `${p.x},${p.y}`).join(" ");
-  const color = positive ? "#DCFC36" : "#FF4757";
+  const color = positive ? "var(--color-bull)" : "var(--color-bear)";
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-60">
@@ -120,7 +120,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Connection status */}
+      {/* Connection status - mobile */}
       {!apiConnected && (
         <div className="mx-4 mb-3 px-4 py-3 rounded-xl bg-surface border border-border flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-bear animate-pulse" />
@@ -364,7 +364,7 @@ export default function Dashboard() {
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               timeRange === range
                 ? "bg-accent text-black"
-                : "bg-surface border border-border text-muted hover:text-white hover:border-border-light"
+                : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
             }`}
           >
             {range}
@@ -479,7 +479,7 @@ function MiniStat({ label, value, icon: Icon, positive = true }) {
         <Icon size={11} />
         {label}
       </div>
-      <div className={`text-sm font-bold font-tabular ${positive ? "text-white" : "text-bear"}`}>
+      <div className={`text-sm font-bold font-tabular ${positive ? "text-theme-text" : "text-bear"}`}>
         {typeof value === "number"
           ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
           : value ?? "—"}
@@ -496,7 +496,7 @@ function StatCard({ label, value, icon: Icon, positive = true, isAccent = false 
         {label}
       </div>
       <div className={`text-lg font-bold font-tabular ${
-        isAccent ? "text-accent" : positive ? "text-white" : "text-bear"
+        isAccent ? "text-accent" : positive ? "text-theme-text" : "text-bear"
       }`}>
         {typeof value === "number"
           ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`

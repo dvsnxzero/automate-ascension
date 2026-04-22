@@ -31,7 +31,7 @@ function SentimentBar({ score, label }) {
   // score: -1 to 1
   const pct = ((score + 1) / 2) * 100; // 0-100%
   const color =
-    score > 0.2 ? "#DCFC36" : score < -0.2 ? "#FF4757" : "#666";
+    score > 0.2 ? "var(--color-bull)" : score < -0.2 ? "var(--color-bear)" : "var(--color-muted)";
 
   return (
     <div className="flex items-center gap-3">
@@ -40,7 +40,7 @@ function SentimentBar({ score, label }) {
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${pct}%`,
-            background: `linear-gradient(90deg, #FF4757, #666 50%, #DCFC36)`,
+            background: `linear-gradient(90deg, var(--color-bear), var(--color-muted) 50%, var(--color-bull))`,
             clipPath: `inset(0 ${100 - pct}% 0 0)`,
           }}
         />
@@ -361,7 +361,7 @@ export default function IntelPage() {
             className={`px-4 py-2 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
               tab === t.key
                 ? "bg-accent/10 text-accent"
-                : "text-muted hover:text-white"
+                : "text-muted hover:text-theme-text"
             }`}
           >
             <t.icon size={13} />
@@ -378,7 +378,7 @@ export default function IntelPage() {
       ) : !dashboard ? (
         <div className="card p-10 text-center">
           <Radar size={40} className="mx-auto text-border-light mb-4" />
-          <div className="text-white font-semibold mb-2">No data yet</div>
+          <div className="text-theme-text font-semibold mb-2">No data yet</div>
           <div className="text-muted text-sm mb-4">
             Click "Refresh Intel" to scrape Reddit and fetch news.
           </div>
@@ -566,7 +566,7 @@ function EventsTab({ events }) {
     return (
       <div className="card p-10 text-center">
         <Zap size={32} className="mx-auto text-border-light mb-3" />
-        <div className="text-white font-semibold mb-2">No events cataloged</div>
+        <div className="text-theme-text font-semibold mb-2">No events cataloged</div>
         <div className="text-muted text-sm">
           Events are created when significant market-moving news is detected.
           This will populate as the system collects data over time.

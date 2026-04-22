@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Routes, Route, NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,7 +19,9 @@ import BacktestLab from "./components/BacktestLab";
 import IntelPage from "./components/IntelPage";
 import SettingsPage from "./components/Settings";
 import Login from "./components/Login";
-import { checkSession, checkSetup } from "./services/passkey";
+import { ThemeProvider } from "./hooks/useTheme";
+import { useSessionTimeout } from "./hooks/useSessionTimeout";
+import { checkSession, checkSetup, logout } from "./services/passkey";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Home" },
@@ -42,65 +44,14 @@ const mobileNavItems = [
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
-export default function App() {
-  const [authState, setAuthState] = useState("loading"); // loading | login | authenticated
-  const [isSetup, setIsSetup] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        // Check if already logged in
-        const session = await checkSession();
-        if (session.authenticated) {
-          setAuthState("authenticated");
-          return;
-        }
-
-        // Check if passkeys are set up
-        const setup = await checkSetup();
-        setIsSetup(setup.is_setup);
-        setAuthState("login");
-      } catch {
-        setAuthState("login");
-      }
-    })();
-  }, []);
-
-  if (authState === "loading") {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 26 26" fill="none">
-              <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
-            </svg>
-          </div>
-          {/* Pulse ring */}
-          <div className="absolute inset-0 rounded-2xl bg-accent/20 animate-ping" />
-        </div>
-        <div className="text-center">
-          <div className="text-lg font-bold tracking-tight">
-            Automate<span className="text-accent">Ascension</span>
-          </div>
-          <div className="text-xs text-muted mt-1 animate-pulse">Loading dashboard...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (authState === "login") {
-    return (
-      <Login
-        isSetup={isSetup}
-        onAuthenticated={() => setAuthState("authenticated")}
-      />
-    );
-  }
+function AuthenticatedApp({ onLogout }) {
+  // Session timeout — logs out after inactivity
+  useSessionTimeout(onLogout);
 
   return (
-    <div className="min-h-screen bg-black text-white flex overflow-x-hidden max-w-full">
+    <div className="min-h-screen bg-theme-bg text-theme-text flex overflow-x-hidden max-w-full">
       {/* Sidebar — desktop */}
-      <nav className="hidden md:flex flex-col w-60 bg-black border-r border-border p-5 gap-1">
+      <nav className="hidden md:flex flex-col w-60 bg-theme-bg border-r border-border p-5 gap-1">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8 px-2">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
@@ -121,8 +72,8 @@ export default function App() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? "bg-accent/10 text-accent"
-                  : "text-muted hover:text-white hover:bg-surface"
+                  ? "bg-accent-bg text-accent"
+                  : "text-muted hover:text-theme-text hover:bg-surface"
               }`
             }
           >
@@ -133,7 +84,7 @@ export default function App() {
 
         {/* Paper trading badge */}
         <div className="mt-auto pt-4 border-t border-border">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent/10 text-accent text-xs font-bold tracking-wider">
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent-bg text-accent text-xs font-bold tracking-wider">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             PAPER MODE
           </div>
@@ -156,7 +107,7 @@ export default function App() {
       </main>
 
       {/* Bottom nav — mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-border flex justify-around items-center h-16 px-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-theme-bg/90 backdrop-blur-xl border-t border-border flex justify-around items-center h-16 px-2 z-50">
         {mobileNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
@@ -186,5 +137,78 @@ export default function App() {
         ))}
       </nav>
     </div>
+  );
+}
+
+export default function App() {
+  const [authState, setAuthState] = useState("loading"); // loading | login | authenticated
+  const [isSetup, setIsSetup] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Check if already logged in
+        const session = await checkSession();
+        if (session.authenticated) {
+          setAuthState("authenticated");
+          return;
+        }
+
+        // Check if passkeys are set up
+        const setup = await checkSetup();
+        setIsSetup(setup.is_setup);
+        setAuthState("login");
+      } catch {
+        setAuthState("login");
+      }
+    })();
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+    } catch {}
+    setAuthState("login");
+  }, []);
+
+  if (authState === "loading") {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen bg-theme-bg flex flex-col items-center justify-center gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 26 26" fill="none">
+                <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
+              </svg>
+            </div>
+            {/* Pulse ring */}
+            <div className="absolute inset-0 rounded-2xl bg-accent/20 animate-ping" />
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold tracking-tight">
+              Automate<span className="text-accent">Ascension</span>
+            </div>
+            <div className="text-xs text-muted mt-1 animate-pulse">Loading dashboard...</div>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  if (authState === "login") {
+    return (
+      <ThemeProvider>
+        <Login
+          isSetup={isSetup}
+          onAuthenticated={() => setAuthState("authenticated")}
+        />
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <AuthenticatedApp onLogout={handleLogout} />
+    </ThemeProvider>
   );
 }

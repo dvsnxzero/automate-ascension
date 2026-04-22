@@ -61,7 +61,7 @@ export default function ScannerPanel() {
             className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
               activeTab === scanner.id
                 ? "bg-accent text-black"
-                : "bg-surface border border-border text-muted hover:text-white hover:border-border-light"
+                : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
             }`}
           >
             {scanner.label}

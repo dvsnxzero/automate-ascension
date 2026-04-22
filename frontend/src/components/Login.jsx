@@ -82,7 +82,7 @@ export default function Login({ isSetup, onAuthenticated }) {
   // ─── Backup codes reveal (after first setup) ───
   if (backupCodes) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center">
@@ -129,7 +129,7 @@ export default function Login({ isSetup, onAuthenticated }) {
   // ─── Setup (first time) ───
   if (mode === "setup") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center">
@@ -170,7 +170,7 @@ export default function Login({ isSetup, onAuthenticated }) {
   // ─── Register device (after backup code login) ───
   if (mode === "register-device") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center">

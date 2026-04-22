@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Search, Star } from "lucide-react";
 import { getBars, addToWatchlist } from "../services/api";
+import { useTheme } from "../hooks/useTheme";
+
+// Read CSS variable as a hex/rgb string
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
 export default function ChartView() {
   const { symbol: urlSymbol } = useParams();
@@ -12,6 +18,7 @@ export default function ChartView() {
   const [searchInput, setSearchInput] = useState("");
   const [interval, setInterval] = useState("1d");
   const [chartError, setChartError] = useState(null);
+  const { isDark } = useTheme();
 
   // Responsive chart height
   const getChartHeight = () => {
@@ -35,29 +42,38 @@ export default function ChartView() {
 
         const height = getChartHeight();
 
+        // Read theme colors from CSS variables
+        const surfaceColor = cssVar("--color-surface");
+        const mutedColor = cssVar("--color-muted");
+        const surfaceLightColor = cssVar("--color-surface-light");
+        const accentColor = cssVar("--color-accent");
+        const borderColor = cssVar("--color-border");
+        const bullColor = cssVar("--color-bull");
+        const bearColor = cssVar("--color-bear");
+
         chart = createChart(chartContainerRef.current, {
           width: chartContainerRef.current.clientWidth,
           height,
           layout: {
-            background: { color: "#111111" },
-            textColor: "#666666",
+            background: { color: surfaceColor },
+            textColor: mutedColor,
             fontFamily: "'Space Grotesk', system-ui, sans-serif",
           },
           grid: {
-            vertLines: { color: "#1A1A1A" },
-            horzLines: { color: "#1A1A1A" },
+            vertLines: { color: surfaceLightColor },
+            horzLines: { color: surfaceLightColor },
           },
           crosshair: {
             mode: 0,
-            vertLine: { color: "#DCFC36", width: 1, style: 2 },
-            horzLine: { color: "#DCFC36", width: 1, style: 2 },
+            vertLine: { color: accentColor, width: 1, style: 2 },
+            horzLine: { color: accentColor, width: 1, style: 2 },
           },
           timeScale: {
-            borderColor: "#2A2A2A",
+            borderColor: borderColor,
             timeVisible: interval !== "1d" && interval !== "1w",
           },
           rightPriceScale: {
-            borderColor: "#2A2A2A",
+            borderColor: borderColor,
           },
           handleScroll: {
             mouseWheel: true,
@@ -74,12 +90,12 @@ export default function ChartView() {
         chartRef.current = chart;
 
         const candleSeries = chart.addCandlestickSeries({
-          upColor: "#DCFC36",
-          downColor: "#FF4757",
-          borderUpColor: "#DCFC36",
-          borderDownColor: "#FF4757",
-          wickUpColor: "#DCFC36",
-          wickDownColor: "#FF4757",
+          upColor: bullColor,
+          downColor: bearColor,
+          borderUpColor: bullColor,
+          borderDownColor: bearColor,
+          wickUpColor: bullColor,
+          wickDownColor: bearColor,
         });
 
         // Try real data first, fall back to demo
@@ -105,7 +121,7 @@ export default function ChartView() {
           const sma9Data = computeSMA(bars, 9);
           if (sma9Data.length > 0) {
             const sma9Series = chart.addLineSeries({
-              color: "#DCFC36",
+              color: accentColor,
               lineWidth: 1.5,
               title: "SMA 9",
               lastValueVisible: false,
@@ -119,7 +135,7 @@ export default function ChartView() {
           const sma50Data = computeSMA(bars, 50);
           if (sma50Data.length > 0) {
             const sma50Series = chart.addLineSeries({
-              color: "#666666",
+              color: mutedColor,
               lineWidth: 1,
               lineStyle: 2,
               title: "SMA 50",
@@ -153,7 +169,7 @@ export default function ChartView() {
       if (chart) chart.remove();
       chartRef.current = null;
     };
-  }, [symbol, interval]);
+  }, [symbol, interval, isDark]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -176,7 +192,7 @@ export default function ChartView() {
   return (
     <div className="flex flex-col h-full pb-28 md:pb-8">
       {/* Sticky header — ticker + search + intervals */}
-      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
+      <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-7xl mx-auto">
           {/* Top row: symbol + star + search */}
           <div className="flex items-center gap-3 mb-2">
@@ -218,7 +234,7 @@ export default function ChartView() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 shrink-0 ${
                   interval === int
                     ? "bg-accent text-black"
-                    : "bg-surface border border-border text-muted hover:text-white hover:border-border-light"
+                    : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
                 }`}
               >
                 {int}

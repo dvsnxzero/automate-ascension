@@ -19,19 +19,19 @@ import { getModules, getLessons, getLesson, searchNotes } from "../services/api"
    ──────────────────────────────── */
 const mdComponents = {
   h1: ({ children }) => (
-    <h1 className="text-2xl font-black tracking-tight mb-4 text-white">{children}</h1>
+    <h1 className="text-2xl font-black tracking-tight mb-4 text-theme-text">{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-lg font-bold mt-6 mb-3 text-white">{children}</h2>
+    <h2 className="text-lg font-bold mt-6 mb-3 text-theme-text">{children}</h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-base font-bold mt-5 mb-2 text-white">{children}</h3>
+    <h3 className="text-base font-bold mt-5 mb-2 text-theme-text">{children}</h3>
   ),
   p: ({ children }) => (
     <p className="text-sm text-muted leading-relaxed mb-3">{children}</p>
   ),
   strong: ({ children }) => (
-    <strong className="text-white font-semibold">{children}</strong>
+    <strong className="text-theme-text font-semibold">{children}</strong>
   ),
   em: ({ children }) => <em className="text-accent/80">{children}</em>,
   ul: ({ children }) => (
@@ -85,7 +85,7 @@ function SearchResult({ result, onSelect }) {
       <div className="flex items-start gap-3">
         <FileText size={16} className="text-accent shrink-0 mt-0.5" />
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{result.title}</div>
+          <div className="text-sm font-semibold text-theme-text truncate">{result.title}</div>
           <div className="text-xs text-muted mt-0.5">
             <span className="text-accent/60 font-mono">{result.module_num}</span> · {result.module_name}
           </div>
@@ -210,7 +210,7 @@ export default function CourseNotes() {
   return (
     <div className="flex flex-col h-full pb-28 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
+      <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             {/* Mobile back button */}
@@ -226,7 +226,7 @@ export default function CourseNotes() {
                     setSelectedModule(null);
                   }
                 }}
-                className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted hover:text-white transition-colors"
+                className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted hover:text-theme-text transition-colors"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -260,7 +260,7 @@ export default function CourseNotes() {
                     setSearchQuery("");
                     setSearchResults(null);
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-theme-text"
                 >
                   <X size={14} />
                 </button>
@@ -268,7 +268,7 @@ export default function CourseNotes() {
 
               {/* Search dropdown */}
               {searchResults && (
-                <div className="absolute right-0 top-full mt-2 w-80 md:w-96 max-h-96 overflow-y-auto bg-black border border-border rounded-2xl shadow-2xl z-50 p-2 space-y-2">
+                <div className="absolute right-0 top-full mt-2 w-80 md:w-96 max-h-96 overflow-y-auto bg-theme-bg border border-border rounded-2xl shadow-2xl z-50 p-2 space-y-2">
                   {searching && (
                     <div className="flex items-center gap-2 p-3 text-muted text-sm">
                       <Loader2 size={14} className="animate-spin" />
