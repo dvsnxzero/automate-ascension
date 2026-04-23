@@ -1,0 +1,136 @@
+{
+  "version": 3,
+  "updated": "2026-04-23",
+  "scoring": {
+    "method": "regen_ratio",
+    "shape_weight": 0.75,
+    "color_weight": 0.25,
+    "scale": "0-1 (1 = near-perfect recreation)"
+  },
+  "logos": {
+    "AAPL": {
+      "current_score": 0.78,
+      "shape_score": 0.76,
+      "color_score": 0.85,
+      "shape_notes": "V2: Added bite indentation on right side (rows 4,6 have gap at col 8) and offset leaf/stem (row 0 col 6, row 1 col 5). Bottom split retained. The bite is the key identifier — now present. Leaf is subtle at this resolution but reads correctly. Could still improve: bite could be slightly deeper, body curves could be smoother.",
+      "color_notes": "Using #A3AAAE (silver-gray). Solid contextual choice for Apple's monochrome identity.",
+      "history": [
+        { "version": 1, "score": 0.72, "date": "2026-04-23", "notes": "Basic apple shape, no bite or leaf" },
+        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Added bite on right side + offset leaf" }
+      ]
+    },
+    "TSLA": {
+      "current_score": 0.78,
+      "shape_score": 0.77,
+      "color_score": 0.82,
+      "shape_notes": "V2: Wide curved crown tapering to pointed stem. Shoulder gap creates characteristic notch. Could improve: more convex crown arch, wider inner gap.",
+      "color_notes": "Using #E31937 (Tesla red). Close to actual #E82127.",
+      "history": [
+        { "version": 1, "score": 0.55, "date": "2026-04-23", "notes": "Original T-letter approach" },
+        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Redesigned as emblem silhouette with crown + stem" }
+      ]
+    },
+    "GOOGL": {
+      "current_score": 0.74,
+      "shape_score": 0.73,
+      "color_score": 0.78,
+      "shape_notes": "Open circle G with horizontal bar from right. Opening at top-right reads correctly. Bar entering from right is the key differentiator. Could improve: thinner bar, wider opening gap.",
+      "color_notes": "Using #4285F4 (Google Blue). Exact primary blue match. Real G uses 4 colors — single-color is a valid simplification.",
+      "history": [
+        { "version": 1, "score": 0.74, "date": "2026-04-23" }
+      ]
+    },
+    "AMZN": {
+      "current_score": 0.81,
+      "shape_score": 0.82,
+      "color_score": 0.78,
+      "shape_notes": "V5: Concave bowl/smile — both ends high, center dips to bottom. Symmetric U-curve spanning full grid width. Arrow tip kicks up-right from the right end with a small barb. Top half empty (smile sits below wordmark). This is the correct Amazon smile geometry: a sideways parenthesis bowing downward. Could improve: slightly asymmetric (left end a touch higher than right, per real logo), smoother curve at larger grid sizes.",
+      "color_notes": "Using #FF9900 (Amazon Orange). Exact match for the smile/arrow color.",
+      "history": [
+        { "version": 1, "score": 0.48, "date": "2026-04-23", "notes": "Letter A with underline — didn't match brand" },
+        { "version": 2, "score": 0.68, "date": "2026-04-23", "notes": "Diagonal line, not a smile shape" },
+        { "version": 3, "score": 0.73, "date": "2026-04-23", "notes": "Still too diagonal, not bowing downward" },
+        { "version": 4, "score": 0.73, "date": "2026-04-23", "notes": "Dropped left-to-right, still not a U-shape" },
+        { "version": 5, "score": 0.81, "date": "2026-04-23", "notes": "Correct concave bowl smile with arrow tip — user confirmed shape" }
+      ]
+    },
+    "MSFT": {
+      "current_score": 0.88,
+      "shape_score": 0.92,
+      "color_score": 0.75,
+      "shape_notes": "Four-pane window grid is nearly perfect. Equal quadrants, centered single-dot gap divider. Strongest shape match. Could improve: add 4-color quadrants.",
+      "color_notes": "Using #00A4EF (one of four Windows pane colors). Could use 4 colors for the 4 quadrants.",
+      "history": [
+        { "version": 1, "score": 0.88, "date": "2026-04-23" }
+      ]
+    },
+    "META": {
+      "current_score": 0.70,
+      "shape_score": 0.68,
+      "color_score": 0.75,
+      "shape_notes": "V2: Wider infinity loops with clearer center crossing. The two loops are more distinct — left loop (cols 0-4) and right loop (cols 6-10) connected by crossing at col 5. Vertical symmetry improved. The thick bases (row 7) and thinning at top give the lemniscate feel. Could improve: the loops could be rounder, the crossing point could have more visual weight.",
+      "color_notes": "Using #0081FB (Meta blue). Exact match. Real logo has gradient which can't be represented.",
+      "history": [
+        { "version": 1, "score": 0.62, "date": "2026-04-23", "notes": "Infinity shape was too angular and hard to read" },
+        { "version": 2, "score": 0.70, "date": "2026-04-23", "notes": "Wider loops, clearer center crossing" }
+      ]
+    },
+    "NVDA": {
+      "current_score": 0.65,
+      "shape_score": 0.63,
+      "color_score": 0.70,
+      "shape_notes": "Diagonal sweep from bottom-left to top-right with concave left edge. Reads more like a parallelogram than an eye. Needs curved top edge and distinct eye opening.",
+      "color_notes": "Using #76B900 (NVIDIA Green). Exact match.",
+      "history": [
+        { "version": 1, "score": 0.65, "date": "2026-04-23" }
+      ]
+    },
+    "NFLX": {
+      "current_score": 0.82,
+      "shape_score": 0.84,
+      "color_score": 0.78,
+      "shape_notes": "Netflix ribbon-N is very well executed. Two vertical bars with clean diagonal slash. Proportions are good. Could improve: slightly thinner diagonal for more ribbon feel.",
+      "color_notes": "Using #E50914 (Netflix red). Exact match.",
+      "history": [
+        { "version": 1, "score": 0.82, "date": "2026-04-23" }
+      ]
+    },
+    "SPY": {
+      "current_score": 0.60,
+      "shape_score": 0.56,
+      "color_score": 0.72,
+      "shape_notes": "V2: Cleaner S-curve with better proportioned top and bottom loops. The S reads more naturally now — top loop opens right, bottom loop opens left, with smooth diagonal transition. Still chunky at 11x11 resolution. Could improve: thinner strokes for a more refined S.",
+      "color_notes": "Using #1B365D (deep navy). Reasonable for State Street/SPDR.",
+      "history": [
+        { "version": 1, "score": 0.52, "date": "2026-04-23", "notes": "Lopsided S-curve" },
+        { "version": 2, "score": 0.60, "date": "2026-04-23", "notes": "Balanced S with better loop proportions" }
+      ]
+    }
+  },
+  "improvement_queue": [
+    { "ticker": "SPY", "priority": 1, "current_score": 0.60, "suggestion": "Thinner S strokes, consider spider icon instead" },
+    { "ticker": "NVDA", "priority": 2, "current_score": 0.65, "suggestion": "Reshape as eye with curved top, distinct cutout" },
+    { "ticker": "AMZN", "priority": 6, "current_score": 0.81, "suggestion": "Slight left-high asymmetry, smoother at larger grids" },
+    { "ticker": "META", "priority": 4, "current_score": 0.70, "suggestion": "Rounder loops, more visual weight at crossing" },
+    { "ticker": "GOOGL", "priority": 5, "current_score": 0.74, "suggestion": "Thinner horizontal bar, wider gap opening" },
+    { "ticker": "TSLA", "priority": 6, "current_score": 0.78, "suggestion": "More convex crown arch" },
+    { "ticker": "AAPL", "priority": 7, "current_score": 0.78, "suggestion": "Deeper bite, smoother body curves" },
+    { "ticker": "NFLX", "priority": 8, "current_score": 0.82, "suggestion": "Thinner diagonal for ribbon feel" },
+    { "ticker": "MSFT", "priority": 9, "current_score": 0.88, "suggestion": "Add 4-color quadrants" }
+  ],
+  "session_log": [
+    {
+      "date": "2026-04-23",
+      "session": "initial-audit",
+      "improvements": [
+        { "ticker": "TSLA", "from": 0.55, "to": 0.78, "change": "+0.23" },
+        { "ticker": "AMZN", "from": 0.48, "to": 0.68, "change": "+0.20" },
+        { "ticker": "META", "from": 0.62, "to": 0.70, "change": "+0.08" },
+        { "ticker": "SPY", "from": 0.52, "to": 0.60, "change": "+0.08" },
+        { "ticker": "AAPL", "from": 0.72, "to": 0.78, "change": "+0.06" }
+      ],
+      "avg_score_before": 0.685,
+      "avg_score_after": 0.739
+    }
+  ]
+}

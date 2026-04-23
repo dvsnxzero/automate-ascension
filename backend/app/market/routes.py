@@ -123,35 +123,88 @@ async def get_bars(symbol: str, interval: str = "1d", count: int = 200):
 
 
 @router.get("/search/{query}")
-async def search_symbol(query: str):
-    """Search for stocks by ticker.
+async def search_symbol(query: str, limit: int = 10):
+    """Search for stocks, ETFs, and funds by name or ticker.
 
-    Looks up one or more comma-separated symbols.
+    Uses Finnhub symbol search first, falls back to Yahoo Finance
+    autocomplete if Finnhub returns no results or is unavailable.
     """
-    wb = _get_client()
-    if not wb:
-        return {"query": query, "results": [], "message": "Webull API not connected"}
+    query = query.strip()
+    if not query:
+        return {"query": query, "results": [], "count": 0}
 
-    symbols = [s.strip().upper() for s in query.split(",") if s.strip()]
+    results = []
 
+    # --- Try Finnhub first ---
     try:
-        results = []
-        # Look up each symbol (batch if comma-separated)
-        for sym in symbols[:10]:  # Cap at 10 to avoid rate limits
-            instrument = wb.get_instrument(sym)
-            if instrument:
-                results.append({
-                    "symbol": instrument.get("symbol"),
-                    "name": instrument.get("name"),
-                    "instrument_id": instrument.get("instrument_id"),
-                    "exchange": instrument.get("exchange_code"),
-                })
-
-        return {
-            "query": query,
-            "results": results,
-            "count": len(results),
-        }
+        from app.config import get_settings
+        settings = get_settings()
+        if settings.finnhub_api_key:
+            import finnhub
+            client = finnhub.Client(api_key=settings.finnhub_api_key)
+            resp = client.symbol_lookup(query)
+            if resp and resp.get("count", 0) > 0:
+                for item in resp.get("result", [])[:limit]:
+                    results.append({
+                        "symbol": item.get("symbol", ""),
+                        "name": item.get("description", ""),
+                        "type": item.get("type", ""),
+                        "exchange": item.get("displaySymbol", item.get("symbol", "")),
+                        "source": "finnhub",
+                    })
     except Exception as e:
-        logger.error(f"Symbol search failed for {query}: {e}")
-        return {"query": query, "results": [], "message": f"Error: {str(e)}"}
+        logger.warning(f"Finnhub search failed for '{query}': {e}")
+
+    # --- Fallback to Yahoo Finance if no Finnhub results ---
+    if not results:
+        try:
+            import httpx
+            url = "https://query2.finance.yahoo.com/v1/finance/search"
+            params = {
+                "q": query,
+                "quotesCount": limit,
+                "newsCount": 0,
+                "listsCount": 0,
+                "enableFuzzyQuery": True,
+                "quotesQueryId": "tss_match_phrase_query",
+            }
+            headers = {"User-Agent": "Mozilla/5.0"}
+            async with httpx.AsyncClient() as http:
+                resp = await http.get(url, params=params, headers=headers, timeout=5.0)
+                data = resp.json()
+                for item in data.get("quotes", [])[:limit]:
+                    symbol = item.get("symbol", "")
+                    # Skip non-equity types we don't care about
+                    qtype = item.get("quoteType", "")
+                    results.append({
+                        "symbol": symbol,
+                        "name": item.get("shortname") or item.get("longname", ""),
+                        "type": qtype,
+                        "exchange": item.get("exchange", ""),
+                        "source": "yahoo",
+                    })
+        except Exception as e:
+            logger.warning(f"Yahoo Finance search failed for '{query}': {e}")
+
+    # --- Last resort: try Webull instrument lookup ---
+    if not results:
+        wb = _get_client()
+        if wb:
+            try:
+                instrument = wb.get_instrument(query.upper())
+                if instrument:
+                    results.append({
+                        "symbol": instrument.get("symbol", query.upper()),
+                        "name": instrument.get("name", ""),
+                        "type": "Stock",
+                        "exchange": instrument.get("exchange_code", ""),
+                        "source": "webull",
+                    })
+            except Exception as e:
+                logger.warning(f"Webull search failed for '{query}': {e}")
+
+    return {
+        "query": query,
+        "results": results,
+        "count": len(results),
+    }

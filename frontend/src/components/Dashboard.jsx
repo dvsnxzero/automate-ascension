@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getAccount, getPositions, getWatchlist, healthCheck } from "../services/api";
+import DotLogo from "./DotLogo";
 
 // Mini sparkline SVG component
 function Sparkline({ data = [], positive = true, width = 100, height = 40 }) {
@@ -192,9 +193,7 @@ export default function Dashboard() {
               >
                 {/* Card header */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-lg">
-                    {pos.symbol[0]}
-                  </div>
+                  <DotLogo ticker={pos.symbol} size={48} />
                   <div className="flex-1">
                     <div className="font-bold text-base">{pos.symbol}</div>
                     <div className="text-muted text-xs">{pos.name || pos.symbol}</div>
@@ -247,9 +246,7 @@ export default function Dashboard() {
                   className="flex items-center justify-between px-4 py-4 active:bg-surface-light"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent font-bold text-xs">
-                      {item.symbol[0]}
-                    </div>
+                    <DotLogo ticker={item.symbol} size={36} />
                     <span className="font-semibold text-sm">{item.symbol}</span>
                   </div>
                   <span className="text-xs text-muted">{item.strategy}</span>
@@ -395,9 +392,7 @@ export default function Dashboard() {
               to={`/chart/${pos.symbol}`}
               className="card-hover flex items-center gap-4 p-4"
             >
-              <div className="w-10 h-10 rounded-xl bg-surface-light border border-border flex items-center justify-center text-accent font-bold text-sm">
-                {pos.symbol[0]}
-              </div>
+              <DotLogo ticker={pos.symbol} size={40} />
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm">{pos.name || pos.symbol}</div>
                 <div className="text-muted text-xs">{pos.symbol}</div>

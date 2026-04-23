@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Star } from "lucide-react";
-import { getBars, addToWatchlist } from "../services/api";
+import { Search, Star, TrendingUp } from "lucide-react";
+import { getBars, addToWatchlist, searchSymbol } from "../services/api";
 import { useTheme } from "../hooks/useTheme";
+import DotLogo from "./DotLogo";
 
 // Read CSS variable as a hex/rgb string
 function cssVar(name) {
@@ -16,8 +17,15 @@ export default function ChartView() {
   const chartRef = useRef(null);
   const [symbol, setSymbol] = useState(urlSymbol?.toUpperCase() || "AAPL");
   const [searchInput, setSearchInput] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [interval, setInterval] = useState("1d");
   const [chartError, setChartError] = useState(null);
+  const [stockInfo, setStockInfo] = useState({ name: "", type: "", exchange: "" });
+  const [priceInfo, setPriceInfo] = useState({ price: null, change: null, changePct: null, open: null, high: null, low: null, volume: null });
+  const searchRef = useRef(null);
+  const debounceRef = useRef(null);
   const { isDark } = useTheme();
 
   // Responsive chart height
@@ -25,6 +33,22 @@ export default function ChartView() {
     if (typeof window === "undefined") return 400;
     return window.innerWidth < 768 ? 320 : 500;
   };
+
+  // Fetch company name when symbol changes
+  useEffect(() => {
+    let cancelled = false;
+    setStockInfo({ name: "", type: "", exchange: "" });
+    searchSymbol(symbol).then((res) => {
+      if (cancelled) return;
+      const match = (res.data.results || []).find(
+        (r) => r.symbol.toUpperCase() === symbol.toUpperCase()
+      ) || res.data.results?.[0];
+      if (match) {
+        setStockInfo({ name: match.name || "", type: match.type || "", exchange: match.exchange || "" });
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [symbol]);
 
   // Load chart
   useEffect(() => {
@@ -120,6 +144,37 @@ export default function ChartView() {
         candleSeries.setData(bars);
         chart.timeScale().fitContent();
 
+        // Compute price info from bars
+        if (bars.length >= 2) {
+          const last = bars[bars.length - 1];
+          const first = bars[0];
+          const change = last.close - first.open;
+          const changePct = (change / first.open) * 100;
+          // Session high/low/volume from all bars
+          let sessionHigh = -Infinity, sessionLow = Infinity;
+          for (const b of bars) {
+            if (b.high > sessionHigh) sessionHigh = b.high;
+            if (b.low < sessionLow) sessionLow = b.low;
+          }
+          setPriceInfo({
+            price: last.close,
+            change,
+            changePct,
+            open: first.open,
+            high: sessionHigh,
+            low: sessionLow,
+            volume: null, // bars don't include volume
+          });
+        } else if (bars.length === 1) {
+          const b = bars[0];
+          setPriceInfo({
+            price: b.close,
+            change: b.close - b.open,
+            changePct: ((b.close - b.open) / b.open) * 100,
+            open: b.open, high: b.high, low: b.low, volume: null,
+          });
+        }
+
         // Add SMA overlay if we have enough data
         if (bars.length >= 9 && !cancelled) {
           const sma9Data = computeSMA(bars, 9);
@@ -175,15 +230,59 @@ export default function ChartView() {
     };
   }, [symbol, interval, isDark]);
 
+  // Debounced search as user types
+  const handleSearchInput = (value) => {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value.trim()) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    setSearchLoading(true);
+    setSearchOpen(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchSymbol(value.trim());
+        setSearchResults(res.data.results || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+  };
+
+  const selectResult = (sym) => {
+    setSymbol(sym.toUpperCase());
+    navigate(`/chart/${sym.toUpperCase()}`);
+    setSearchInput("");
+    setSearchResults([]);
+    setSearchOpen(false);
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      const s = searchInput.trim().toUpperCase();
-      setSymbol(s);
-      navigate(`/chart/${s}`);
-      setSearchInput("");
+      // If results exist, pick the first one; otherwise treat input as ticker
+      if (searchResults.length > 0) {
+        selectResult(searchResults[0].symbol);
+      } else {
+        selectResult(searchInput.trim());
+      }
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleAddToWatchlist = async () => {
     try {
@@ -195,23 +294,67 @@ export default function ChartView() {
 
   return (
     <div className="flex flex-col h-full pb-28 md:pb-8">
-      {/* Sticky header — ticker + search + intervals */}
+      {/* Sticky header — stock info + search + intervals */}
       <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-7xl mx-auto">
-          {/* Top row: symbol + star + search */}
+          {/* Top row: stock identity + search */}
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight shrink-0">
-              {symbol}
-            </h1>
-            <button
-              onClick={handleAddToWatchlist}
-              className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors shrink-0"
-              title="Add to watchlist"
-            >
-              <Star size={14} />
-            </button>
+            {/* Stock identity block */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <DotLogo ticker={symbol} size={44} className="shrink-0 hidden sm:block" />
+              <div className="shrink-0">
+                <div className="flex items-center gap-2">
+                  <DotLogo ticker={symbol} size={28} className="shrink-0 sm:hidden" />
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight">{symbol}</h1>
+                  <button
+                    onClick={handleAddToWatchlist}
+                    className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors"
+                    title="Add to watchlist"
+                  >
+                    <Star size={12} />
+                  </button>
+                </div>
+                {stockInfo.name && (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted truncate max-w-[200px]">{stockInfo.name}</span>
+                    {stockInfo.type && (
+                      <span className="text-[9px] font-semibold text-muted bg-surface px-1.5 py-0.5 rounded border border-border">
+                        {stockInfo.type}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
-            <form onSubmit={handleSearch} className="ml-auto">
+              {/* Price block */}
+              {priceInfo.price !== null && (
+                <div className="ml-4 shrink-0 hidden sm:block">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl md:text-3xl font-black font-mono">
+                      ${priceInfo.price.toFixed(2)}
+                    </span>
+                    <span className={`text-sm font-bold ${priceInfo.change >= 0 ? "text-bull" : "text-bear"}`}>
+                      {priceInfo.change >= 0 ? "+" : ""}{priceInfo.change.toFixed(2)}
+                    </span>
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+                      priceInfo.changePct >= 0
+                        ? "bg-bull/10 text-bull"
+                        : "bg-bear/10 text-bear"
+                    }`}>
+                      {priceInfo.changePct >= 0 ? "+" : ""}{priceInfo.changePct.toFixed(2)}%
+                    </span>
+                  </div>
+                  {/* Mini stats row */}
+                  <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted font-mono">
+                    <span>O {priceInfo.open?.toFixed(2)}</span>
+                    <span>H {priceInfo.high?.toFixed(2)}</span>
+                    <span>L {priceInfo.low?.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSearch} className="ml-auto" ref={searchRef}>
               <div className="relative">
                 <Search
                   size={14}
@@ -220,13 +363,61 @@ export default function ChartView() {
                 <input
                   type="text"
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search ticker..."
-                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-accent/50 w-36 md:w-44 transition-colors"
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+                  placeholder="Search stocks, ETFs..."
+                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-accent/50 w-44 md:w-64 transition-colors"
                 />
+
+                {/* Autocomplete dropdown */}
+                {searchOpen && (searchResults.length > 0 || searchLoading) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto">
+                    {searchLoading && searchResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-muted">Searching...</div>
+                    ) : (
+                      searchResults.map((r, i) => (
+                        <button
+                          key={`${r.symbol}-${i}`}
+                          type="button"
+                          onClick={() => selectResult(r.symbol)}
+                          className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-surface-light transition-colors text-left"
+                        >
+                          <DotLogo ticker={r.symbol} size={32} className="shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm">{r.symbol}</span>
+                              {r.type && (
+                                <span className="text-[10px] font-medium text-muted bg-surface-light px-1.5 py-0.5 rounded">
+                                  {r.type}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted truncate">{r.name}</div>
+                          </div>
+                          <span className="text-[10px] text-muted/50 shrink-0">{r.exchange}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </form>
           </div>
+
+          {/* Mobile price display */}
+          {priceInfo.price !== null && (
+            <div className="flex items-center gap-3 mb-2 sm:hidden">
+              <span className="text-xl font-black font-mono">${priceInfo.price.toFixed(2)}</span>
+              <span className={`text-sm font-bold ${priceInfo.change >= 0 ? "text-bull" : "text-bear"}`}>
+                {priceInfo.change >= 0 ? "+" : ""}{priceInfo.change.toFixed(2)}
+              </span>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+                priceInfo.changePct >= 0 ? "bg-bull/10 text-bull" : "bg-bear/10 text-bear"
+              }`}>
+                {priceInfo.changePct >= 0 ? "+" : ""}{priceInfo.changePct.toFixed(2)}%
+              </span>
+            </div>
+          )}
 
           {/* Interval buttons row */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
