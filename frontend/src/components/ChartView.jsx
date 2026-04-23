@@ -141,6 +141,44 @@ export default function ChartView() {
 
         if (cancelled) return;
 
+        // Normalize bar time values for lightweight-charts
+        // Daily/weekly: must be "YYYY-MM-DD" string
+        // Intraday: must be Unix timestamp (number)
+        const isIntraday = ["1m","5m","15m","30m","1h","4h"].includes(interval);
+        bars = bars.map((b) => {
+          let t = b.time;
+          if (isIntraday) {
+            // Ensure Unix timestamp (seconds)
+            if (typeof t === "string") {
+              t = Math.floor(new Date(t).getTime() / 1000);
+            }
+          } else {
+            // Ensure "YYYY-MM-DD" string
+            if (typeof t === "number") {
+              t = new Date(t * 1000).toISOString().split("T")[0];
+            } else if (typeof t === "string" && t.includes("T")) {
+              t = t.split("T")[0];
+            }
+          }
+          return { ...b, time: t };
+        }).filter((b) => b.time && b.open && b.close);
+
+        // Sort by time ascending (lightweight-charts requires this)
+        bars.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+
+        // Remove duplicate timestamps
+        const seen = new Set();
+        bars = bars.filter((b) => {
+          const k = String(b.time);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+
+        if (bars.length === 0) {
+          bars = generateDemoData(interval);
+        }
+
         candleSeries.setData(bars);
         chart.timeScale().fitContent();
 
@@ -366,7 +404,7 @@ export default function ChartView() {
                   onChange={(e) => handleSearchInput(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
                   placeholder="Search stocks, ETFs..."
-                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-accent/50 w-44 md:w-64 transition-colors"
+                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-[16px] md:text-sm focus:outline-none focus:border-accent/50 w-44 md:w-64 transition-colors"
                 />
 
                 {/* Autocomplete dropdown */}

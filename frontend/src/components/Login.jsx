@@ -145,7 +145,7 @@ export default function Login({ isSetup, onAuthenticated }) {
               </svg>
             </div>
             <h1 className="text-2xl font-black tracking-tight">
-              Automate<span className="text-accent">Ascension</span>
+              <span className="text-theme-text">Automate</span><span className="text-accent">Ascension</span>
             </h1>
             <p className="text-muted text-sm mt-2">Set up passkey to secure your dashboard</p>
           </div>
@@ -252,7 +252,7 @@ export default function Login({ isSetup, onAuthenticated }) {
             </svg>
           </div>
           <h1 className="text-2xl font-black tracking-tight">
-            Automate<span className="text-accent">Ascension</span>
+            <span className="text-theme-text">Automate</span><span className="text-accent">Ascension</span>
           </h1>
           <p className="text-muted text-sm mt-2">Sign in to continue</p>
         </div>
