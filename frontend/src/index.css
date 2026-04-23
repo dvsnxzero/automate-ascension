@@ -24,14 +24,14 @@
   --color-text-secondary: #444444;
   --color-muted: #777777;
 
-  /* Accent */
-  --color-accent: #B8D430;        /* slightly darker on light bg for contrast */
-  --color-accent-dim: #A0B828;
-  --color-accent-bg: rgba(184, 212, 48, 0.12);
+  /* Accent — darkened for white-bg contrast (WCAG AA on white) */
+  --color-accent: #6B8A00;
+  --color-accent-dim: #587300;
+  --color-accent-bg: rgba(107, 138, 0, 0.10);
 
   /* Semantic */
-  --color-bull: #4CAF50;
-  --color-bear: #FF4757;
+  --color-bull: #2E7D32;
+  --color-bear: #D32F2F;
 
   /* Scrollbar */
   --color-scrollbar-track: #F0F0F0;
@@ -39,7 +39,7 @@
   --color-scrollbar-thumb-hover: #AAAAAA;
 
   /* Selection */
-  --color-selection-bg: rgba(184, 212, 48, 0.25);
+  --color-selection-bg: rgba(107, 138, 0, 0.20);
   --color-selection-text: #111111;
 
   /* Grain overlay */

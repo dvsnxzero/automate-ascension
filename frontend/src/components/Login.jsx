@@ -26,7 +26,14 @@ export default function Login({ isSetup, onAuthenticated }) {
         onAuthenticated();
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || err.message || "Registration failed");
+      const msg = err?.response?.data?.detail || err.message || "";
+      // If credential already exists in authenticator, switch to login
+      if (msg.includes("already registered") || msg.includes("InvalidStateError")) {
+        setError(null);
+        setMode("login");
+        return;
+      }
+      setError(msg || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -99,7 +106,7 @@ export default function Login({ isSetup, onAuthenticated }) {
               {backupCodes.map((code, i) => (
                 <div
                   key={i}
-                  className="bg-black rounded-lg px-3 py-2 text-center font-mono text-sm text-accent tracking-widest"
+                  className="bg-surface-light rounded-lg px-3 py-2 text-center font-mono text-sm text-accent tracking-widest"
                 >
                   {code}
                 </div>
@@ -162,6 +169,14 @@ export default function Login({ isSetup, onAuthenticated }) {
           <p className="text-muted/50 text-xs text-center mt-4">
             Uses Face ID, Touch ID, or Windows Hello
           </p>
+
+          <button
+            onClick={() => { setMode("login"); setError(null); }}
+            className="w-full ghost-btn mt-3 flex items-center justify-center gap-2 text-sm"
+          >
+            <Fingerprint size={14} />
+            Already set up? Sign in
+          </button>
         </div>
       </div>
     );
@@ -228,7 +243,7 @@ export default function Login({ isSetup, onAuthenticated }) {
 
   // ─── Login ───
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-theme-bg flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center">
