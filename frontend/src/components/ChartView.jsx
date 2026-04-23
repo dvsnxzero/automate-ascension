@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Star, TrendingUp } from "lucide-react";
+import { Search, Star, TrendingUp, Grid3X3 } from "lucide-react";
 import { getBars, getQuote, addToWatchlist, searchSymbol } from "../services/api";
 import { useTheme } from "../hooks/useTheme";
 import DotLogo from "./DotLogo";
+import DotChart from "./DotChart";
 
 // Read CSS variable as a hex/rgb string
 function cssVar(name) {
@@ -27,6 +28,8 @@ export default function ChartView() {
   const [dataSource, setDataSource] = useState(null); // "webull" | "yahoo" | "demo"
   const [noResults, setNoResults] = useState(false);
   const [quoteData, setQuoteData] = useState(null);
+  const [chartMode, setChartMode] = useState("candle"); // "candle" | "dot"
+  const [rawBars, setRawBars] = useState([]);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
   const { isDark } = useTheme();
@@ -198,6 +201,7 @@ export default function ChartView() {
         }
 
         candleSeries.setData(bars);
+        if (!cancelled) setRawBars(bars);
         chart.timeScale().fitContent();
 
         // Compute price info from bars
@@ -484,8 +488,8 @@ export default function ChartView() {
             </div>
           )}
 
-          {/* Interval buttons row */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          {/* Interval buttons row + chart mode toggle */}
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar items-center">
             {["1m", "5m", "15m", "1h", "1d", "1w"].map((int) => (
               <button
                 key={int}
@@ -500,6 +504,29 @@ export default function ChartView() {
                 {int}
               </button>
             ))}
+            {/* Chart mode toggle */}
+            <div className="ml-auto flex bg-surface rounded-lg border border-border overflow-hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => setChartMode("candle")}
+                className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  chartMode === "candle" ? "bg-accent/10 text-accent" : "text-muted"
+                }`}
+                title="Candlestick"
+              >
+                <TrendingUp size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode("dot")}
+                className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  chartMode === "dot" ? "bg-accent/10 text-accent" : "text-muted"
+                }`}
+                title="Dot Matrix"
+              >
+                <Grid3X3 size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -535,7 +562,11 @@ export default function ChartView() {
           )}
 
           {/* Chart container */}
-          {chartError ? (
+          {chartMode === "dot" && rawBars.length > 0 ? (
+            <div className="card overflow-hidden mb-4 p-2">
+              <DotChart bars={rawBars} symbol={symbol} height={340} />
+            </div>
+          ) : chartError ? (
             <div className="card p-10 text-center mb-4">
               <div className="text-muted text-sm">{chartError}</div>
             </div>

@@ -26,6 +26,7 @@ import {
   createTrade,
   updateTrade,
 } from "../services/api";
+import DotCalendar from "./DotCalendar";
 
 /* ────────────────────────────────
    Mini balance chart (SVG)
@@ -756,6 +757,9 @@ function OverviewTab({ stats, balances, trades, period }) {
           </div>
         </div>
       )}
+
+      {/* Calendar heatmap */}
+      <DotCalendar trades={trades} />
 
       {/* Strategy breakdown */}
       {stats.by_strategy && Object.keys(stats.by_strategy).length > 0 && (

@@ -14,32 +14,8 @@ import {
 } from "lucide-react";
 import { getAccount, getPositions, getWatchlist, healthCheck } from "../services/api";
 import DotLogo from "./DotLogo";
-
-// Mini sparkline SVG component
-function Sparkline({ data = [], positive = true, width = 100, height = 40 }) {
-  if (data.length < 2) {
-    const pts = Array.from({ length: 20 }, (_, i) => ({
-      x: (i / 19) * width,
-      y: height / 2 + (Math.random() - 0.5) * (height * 0.75),
-    }));
-    data = pts;
-  }
-  const points = data.map((p) => `${p.x},${p.y}`).join(" ");
-  const color = positive ? "var(--color-bull)" : "var(--color-bear)";
-
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-60">
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import DotSparkline from "./DotSparkline";
+import DotWaffle from "./DotWaffle";
 
 export default function Dashboard() {
   const [account, setAccount] = useState(null);
@@ -164,6 +140,19 @@ export default function Dashboard() {
             <MiniStat label="Portfolio" value={account?.total_value} icon={BarChart3} />
           </div>
 
+          {/* Portfolio waffle — mobile */}
+          <div className="px-4 mb-4">
+            <DotWaffle
+              holdings={displayPositions.map((p, i) => ({
+                symbol: p.symbol,
+                pct: 100 / displayPositions.length,
+                color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A"][i % 4],
+              }))}
+              totalValue={portfolioValue}
+              dotRadius={6}
+            />
+          </div>
+
           {/* Swipeable position cards */}
           <div className="px-4 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-muted uppercase tracking-wider">Positions</h2>
@@ -207,7 +196,7 @@ export default function Dashboard() {
 
                 {/* Sparkline — full width */}
                 <div className="mb-4">
-                  <Sparkline positive={(pos.change ?? 0) >= 0} width={280} height={80} />
+                  <DotSparkline positive={(pos.change ?? 0) >= 0} width={280} height={80} dotCount={24} dotRadius={3} />
                 </div>
 
                 {/* Price */}
@@ -377,6 +366,18 @@ export default function Dashboard() {
         <StatCard label="Mode" value={account?.account_type?.toUpperCase() ?? "PAPER"} icon={BarChart3} isAccent />
       </div>
 
+      {/* Portfolio allocation waffle */}
+      <div className="mb-8">
+        <DotWaffle
+          holdings={displayPositions.map((p, i) => ({
+            symbol: p.symbol,
+            pct: 100 / displayPositions.length, // Even split for demo; real data from positions
+            color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A", "#FF9100", "#00BFA5", "#7B61FF", "#46BDC6"][i % 8],
+          }))}
+          totalValue={portfolioValue}
+        />
+      </div>
+
       {/* Portfolio positions */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -397,7 +398,7 @@ export default function Dashboard() {
                 <div className="font-semibold text-sm">{pos.name || pos.symbol}</div>
                 <div className="text-muted text-xs">{pos.symbol}</div>
               </div>
-              <Sparkline positive={(pos.change ?? pos.change_pct ?? 0) >= 0} />
+              <DotSparkline positive={(pos.change ?? pos.change_pct ?? 0) >= 0} width={100} height={40} dotCount={20} dotRadius={2.5} />
               <div className="text-right">
                 <div className={`text-sm font-semibold px-3 py-1 rounded-lg ${
                   (pos.change ?? pos.change_pct ?? 0) >= 0
