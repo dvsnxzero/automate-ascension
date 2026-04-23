@@ -9,25 +9,27 @@
   },
   "logos": {
     "AAPL": {
-      "current_score": 0.78,
-      "shape_score": 0.76,
+      "current_score": 0.81,
+      "shape_score": 0.80,
       "color_score": 0.85,
-      "shape_notes": "V2: Added bite indentation on right side (rows 4,6 have gap at col 8) and offset leaf/stem (row 0 col 6, row 1 col 5). Bottom split retained. The bite is the key identifier — now present. Leaf is subtle at this resolution but reads correctly. Could still improve: bite could be slightly deeper, body curves could be smoother.",
+      "shape_notes": "V3: Deeper 2-dot bite (cols 7-8 empty at rows 4,6). Much more recognizable Apple silhouette. Body curves unchanged — smooth 5→7→7→9 transition.",
       "color_notes": "Using #A3AAAE (silver-gray). Solid contextual choice for Apple's monochrome identity.",
       "history": [
         { "version": 1, "score": 0.72, "date": "2026-04-23", "notes": "Basic apple shape, no bite or leaf" },
-        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Added bite on right side + offset leaf" }
+        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Added bite on right side + offset leaf" },
+        { "version": 3, "score": 0.81, "date": "2026-04-23", "notes": "Deeper 2-dot bite — key recognizability boost" }
       ]
     },
     "TSLA": {
-      "current_score": 0.78,
-      "shape_score": 0.77,
+      "current_score": 0.82,
+      "shape_score": 0.82,
       "color_score": 0.82,
-      "shape_notes": "V2: Wide curved crown tapering to pointed stem. Shoulder gap creates characteristic notch. Could improve: more convex crown arch, wider inner gap.",
+      "shape_notes": "V3: Convex 3-step crown arch (7→9→11 dots) instead of flat top. The arch is the defining Tesla emblem feature. Shoulder notch and stem unchanged.",
       "color_notes": "Using #E31937 (Tesla red). Close to actual #E82127.",
       "history": [
         { "version": 1, "score": 0.55, "date": "2026-04-23", "notes": "Original T-letter approach" },
-        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Redesigned as emblem silhouette with crown + stem" }
+        { "version": 2, "score": 0.78, "date": "2026-04-23", "notes": "Redesigned as emblem silhouette with crown + stem" },
+        { "version": 3, "score": 0.82, "date": "2026-04-23", "notes": "Convex crown arch — 3-step taper at top" }
       ]
     },
     "GOOGL": {
@@ -42,17 +44,18 @@
       ]
     },
     "AMZN": {
-      "current_score": 0.81,
-      "shape_score": 0.82,
+      "current_score": 0.83,
+      "shape_score": 0.84,
       "color_score": 0.78,
-      "shape_notes": "V5: Concave bowl/smile — both ends high, center dips to bottom. Symmetric U-curve spanning full grid width. Arrow tip kicks up-right from the right end with a small barb. Top half empty (smile sits below wordmark). This is the correct Amazon smile geometry: a sideways parenthesis bowing downward. Could improve: slightly asymmetric (left end a touch higher than right, per real logo), smoother curve at larger grid sizes.",
+      "shape_notes": "V6: Left-high asymmetry — left end starts 1 row higher (row 4) than right end (row 5), matching real Amazon smile. Smoother curve with each point moving exactly 1 col + 1 row. Arrow barb preserved.",
       "color_notes": "Using #FF9900 (Amazon Orange). Exact match for the smile/arrow color.",
       "history": [
         { "version": 1, "score": 0.48, "date": "2026-04-23", "notes": "Letter A with underline — didn't match brand" },
         { "version": 2, "score": 0.68, "date": "2026-04-23", "notes": "Diagonal line, not a smile shape" },
         { "version": 3, "score": 0.73, "date": "2026-04-23", "notes": "Still too diagonal, not bowing downward" },
         { "version": 4, "score": 0.73, "date": "2026-04-23", "notes": "Dropped left-to-right, still not a U-shape" },
-        { "version": 5, "score": 0.81, "date": "2026-04-23", "notes": "Correct concave bowl smile with arrow tip — user confirmed shape" }
+        { "version": 5, "score": 0.81, "date": "2026-04-23", "notes": "Correct concave bowl smile with arrow tip — user confirmed shape" },
+        { "version": 6, "score": 0.83, "date": "2026-04-23", "notes": "Left-high asymmetry + smoother curve" }
       ]
     },
     "MSFT": {
@@ -116,11 +119,12 @@
   "improvement_queue": [
     { "ticker": "SPY", "priority": 1, "current_score": 0.75, "suggestion": "Near optimal — minor refinements only" },
     { "ticker": "NVDA", "priority": 2, "current_score": 0.76, "suggestion": "Slightly thicker pupil line at larger sizes" },
-    { "ticker": "META", "priority": 4, "current_score": 0.78, "suggestion": "Subtle stroke width variation at loop extremes" },
-    { "ticker": "TSLA", "priority": 5, "current_score": 0.78, "suggestion": "More convex crown arch" },
-    { "ticker": "AAPL", "priority": 6, "current_score": 0.78, "suggestion": "Deeper bite, smoother body curves" },
-    { "ticker": "AMZN", "priority": 7, "current_score": 0.81, "suggestion": "Slight left-high asymmetry, smoother at larger grids" },
-    { "ticker": "NFLX", "priority": 8, "current_score": 0.82, "suggestion": "Thinner diagonal for ribbon feel" },
+    { "ticker": "META", "priority": 3, "current_score": 0.78, "suggestion": "Subtle stroke width variation at loop extremes" },
+    { "ticker": "GOOGL", "priority": 4, "current_score": 0.79, "suggestion": "Near optimal" },
+    { "ticker": "AAPL", "priority": 5, "current_score": 0.81, "suggestion": "Near optimal — bite is clear" },
+    { "ticker": "TSLA", "priority": 6, "current_score": 0.82, "suggestion": "Near optimal — crown arch defined" },
+    { "ticker": "NFLX", "priority": 7, "current_score": 0.82, "suggestion": "Thinner diagonal for ribbon feel" },
+    { "ticker": "AMZN", "priority": 8, "current_score": 0.83, "suggestion": "Near optimal — asymmetry captured" },
     { "ticker": "MSFT", "priority": 9, "current_score": 0.88, "suggestion": "Add 4-color quadrants" }
   ],
   "session_log": [
@@ -174,6 +178,17 @@
       ],
       "avg_score_before": 0.779,
       "avg_score_after": 0.785
+    },
+    {
+      "date": "2026-04-23",
+      "session": "auto-improve-6",
+      "improvements": [
+        { "ticker": "TSLA", "from": 0.78, "to": 0.82, "change": "+0.04" },
+        { "ticker": "AAPL", "from": 0.78, "to": 0.81, "change": "+0.03" },
+        { "ticker": "AMZN", "from": 0.81, "to": 0.83, "change": "+0.02" }
+      ],
+      "avg_score_before": 0.785,
+      "avg_score_after": 0.805
     }
   ]
 }
