@@ -30,7 +30,7 @@ def _log_access(source: str, endpoint: str, symbol: str | None,
             source=source, endpoint=endpoint, symbol=symbol,
             status=status, response_ms=response_ms,
             record_count=record_count, error_message=error_message,
-            metadata=meta,
+            extra_data=meta,
         ))
         db.commit()
         db.close()

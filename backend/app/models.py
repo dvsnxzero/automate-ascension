@@ -294,7 +294,7 @@ class DataAccessLog(Base):
     response_ms: Mapped[int | None] = mapped_column(Integer)  # latency in ms
     record_count: Mapped[int | None] = mapped_column(Integer)  # rows/bars returned
     error_message: Mapped[str | None] = mapped_column(Text)
-    metadata: Mapped[dict | None] = mapped_column(JSON)  # interval, count, etc.
+    extra_data: Mapped[dict | None] = mapped_column(JSON)  # interval, count, etc.
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
