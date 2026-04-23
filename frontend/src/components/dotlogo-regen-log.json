@@ -76,13 +76,14 @@
       ]
     },
     "NVDA": {
-      "current_score": 0.65,
-      "shape_score": 0.63,
+      "current_score": 0.73,
+      "shape_score": 0.74,
       "color_score": 0.70,
-      "shape_notes": "Diagonal sweep from bottom-left to top-right with concave left edge. Reads more like a parallelogram than an eye. Needs curved top edge and distinct eye opening.",
+      "shape_notes": "V2: Asymmetric eye shape — pointed left corner tapering to single dot (row 5), straight vertical right edge (cols 9-10). Hollow center reads as the eye opening. Top and bottom lids curve symmetrically. The asymmetry (pointy left, flat right) matches NVIDIA's actual mark orientation. Could improve: add subtle interior detail for the pupil/swirl.",
       "color_notes": "Using #76B900 (NVIDIA Green). Exact match.",
       "history": [
-        { "version": 1, "score": 0.65, "date": "2026-04-23" }
+        { "version": 1, "score": 0.65, "date": "2026-04-23", "notes": "Diagonal parallelogram, didn't read as eye" },
+        { "version": 2, "score": 0.73, "date": "2026-04-23", "notes": "Asymmetric eye with pointed left, flat right edge" }
       ]
     },
     "NFLX": {
@@ -96,25 +97,26 @@
       ]
     },
     "SPY": {
-      "current_score": 0.60,
-      "shape_score": 0.56,
+      "current_score": 0.72,
+      "shape_score": 0.71,
       "color_score": 0.72,
-      "shape_notes": "V2: Cleaner S-curve with better proportioned top and bottom loops. The S reads more naturally now — top loop opens right, bottom loop opens left, with smooth diagonal transition. Still chunky at 11x11 resolution. Could improve: thinner strokes for a more refined S.",
+      "shape_notes": "V3: Thin-stroke S with rotational symmetry. 2-dot wide strokes throughout. Top cap and bottom cap mirror. Upper-left arm flows diagonally into center bar, center bar flows into lower-right arm. Clean S-curve with proper proportions and no chunkiness. Could improve: subtle weight variation (thicker at terminals).",
       "color_notes": "Using #1B365D (deep navy). Reasonable for State Street/SPDR.",
       "history": [
         { "version": 1, "score": 0.52, "date": "2026-04-23", "notes": "Lopsided S-curve" },
-        { "version": 2, "score": 0.60, "date": "2026-04-23", "notes": "Balanced S with better loop proportions" }
+        { "version": 2, "score": 0.60, "date": "2026-04-23", "notes": "Balanced S with better loop proportions" },
+        { "version": 3, "score": 0.72, "date": "2026-04-23", "notes": "Thin-stroke S with rotational symmetry, proper proportions" }
       ]
     }
   },
   "improvement_queue": [
-    { "ticker": "SPY", "priority": 1, "current_score": 0.60, "suggestion": "Thinner S strokes, consider spider icon instead" },
-    { "ticker": "NVDA", "priority": 2, "current_score": 0.65, "suggestion": "Reshape as eye with curved top, distinct cutout" },
-    { "ticker": "AMZN", "priority": 6, "current_score": 0.81, "suggestion": "Slight left-high asymmetry, smoother at larger grids" },
-    { "ticker": "META", "priority": 4, "current_score": 0.70, "suggestion": "Rounder loops, more visual weight at crossing" },
-    { "ticker": "GOOGL", "priority": 5, "current_score": 0.74, "suggestion": "Thinner horizontal bar, wider gap opening" },
-    { "ticker": "TSLA", "priority": 6, "current_score": 0.78, "suggestion": "More convex crown arch" },
-    { "ticker": "AAPL", "priority": 7, "current_score": 0.78, "suggestion": "Deeper bite, smoother body curves" },
+    { "ticker": "META", "priority": 1, "current_score": 0.70, "suggestion": "Rounder loops, more visual weight at crossing" },
+    { "ticker": "SPY", "priority": 2, "current_score": 0.72, "suggestion": "Subtle weight variation at terminals" },
+    { "ticker": "NVDA", "priority": 3, "current_score": 0.73, "suggestion": "Add interior pupil/swirl detail" },
+    { "ticker": "GOOGL", "priority": 4, "current_score": 0.74, "suggestion": "Thinner horizontal bar, wider gap opening" },
+    { "ticker": "TSLA", "priority": 5, "current_score": 0.78, "suggestion": "More convex crown arch" },
+    { "ticker": "AAPL", "priority": 6, "current_score": 0.78, "suggestion": "Deeper bite, smoother body curves" },
+    { "ticker": "AMZN", "priority": 7, "current_score": 0.81, "suggestion": "Slight left-high asymmetry, smoother at larger grids" },
     { "ticker": "NFLX", "priority": 8, "current_score": 0.82, "suggestion": "Thinner diagonal for ribbon feel" },
     { "ticker": "MSFT", "priority": 9, "current_score": 0.88, "suggestion": "Add 4-color quadrants" }
   ],
@@ -131,6 +133,16 @@
       ],
       "avg_score_before": 0.685,
       "avg_score_after": 0.739
+    },
+    {
+      "date": "2026-04-23",
+      "session": "auto-improve-2",
+      "improvements": [
+        { "ticker": "SPY", "from": 0.60, "to": 0.72, "change": "+0.12" },
+        { "ticker": "NVDA", "from": 0.65, "to": 0.73, "change": "+0.08" }
+      ],
+      "avg_score_before": 0.739,
+      "avg_score_after": 0.762
     }
   ]
 }

@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
+from app.seed import run_startup_seed
 from app.market.routes import router as market_router
 from app.trade.routes import router as trade_router
 from app.strategy.routes import router as strategy_router
@@ -77,8 +78,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables
+    # Startup: create tables then seed empty ones
     Base.metadata.create_all(bind=engine)
+    run_startup_seed()
     yield
     # Shutdown: cleanup if needed
 
