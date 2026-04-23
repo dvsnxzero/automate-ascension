@@ -31,13 +31,14 @@
       ]
     },
     "GOOGL": {
-      "current_score": 0.74,
-      "shape_score": 0.73,
+      "current_score": 0.79,
+      "shape_score": 0.80,
       "color_score": 0.78,
-      "shape_notes": "Open circle G with horizontal bar from right. Opening at top-right reads correctly. Bar entering from right is the key differentiator. Could improve: thinner bar, wider opening gap.",
+      "shape_notes": "V2: Consistent 2-dot stroke circle, thinner 4-dot bar (cols 5-8), wider 2-row gap (rows 3-4). Better vertical centering (row 10 empty). Cleaner G legibility overall.",
       "color_notes": "Using #4285F4 (Google Blue). Exact primary blue match. Real G uses 4 colors — single-color is a valid simplification.",
       "history": [
-        { "version": 1, "score": 0.74, "date": "2026-04-23" }
+        { "version": 1, "score": 0.74, "date": "2026-04-23", "notes": "3-dot thick top, wide bar, narrow gap" },
+        { "version": 2, "score": 0.79, "date": "2026-04-23", "notes": "Thinner consistent stroke, wider gap, thinner bar" }
       ]
     },
     "AMZN": {
@@ -65,25 +66,27 @@
       ]
     },
     "META": {
-      "current_score": 0.70,
-      "shape_score": 0.68,
+      "current_score": 0.78,
+      "shape_score": 0.79,
       "color_score": 0.75,
-      "shape_notes": "V2: Wider infinity loops with clearer center crossing. The two loops are more distinct — left loop (cols 0-4) and right loop (cols 6-10) connected by crossing at col 5. Vertical symmetry improved. The thick bases (row 7) and thinning at top give the lemniscate feel. Could improve: the loops could be rounder, the crossing point could have more visual weight.",
+      "shape_notes": "V3: Perfect bilateral symmetry on both axes. Two round oval loops (left cols 0-4, right cols 6-10) with clear woven X-crossing at center. Rows 1/9 mirror (top/bottom arcs), rows 2/8 (upper/lower inner curves), rows 3/7 (2-dot-wide sides + crossing convergence at col 5), rows 4/6 (crossing arms at cols 4,6), row 5 (crossed strands diverged to cols 3,7). The weave pattern creates a natural figure-eight read. Could improve: subtle stroke width variation at loop extremes.",
       "color_notes": "Using #0081FB (Meta blue). Exact match. Real logo has gradient which can't be represented.",
       "history": [
         { "version": 1, "score": 0.62, "date": "2026-04-23", "notes": "Infinity shape was too angular and hard to read" },
-        { "version": 2, "score": 0.70, "date": "2026-04-23", "notes": "Wider loops, clearer center crossing" }
+        { "version": 2, "score": 0.70, "date": "2026-04-23", "notes": "Wider loops, clearer center crossing" },
+        { "version": 3, "score": 0.78, "date": "2026-04-23", "notes": "Perfect bilateral symmetry, round oval loops, woven X-crossing" }
       ]
     },
     "NVDA": {
-      "current_score": 0.73,
-      "shape_score": 0.74,
+      "current_score": 0.76,
+      "shape_score": 0.78,
       "color_score": 0.70,
-      "shape_notes": "V2: Asymmetric eye shape — pointed left corner tapering to single dot (row 5), straight vertical right edge (cols 9-10). Hollow center reads as the eye opening. Top and bottom lids curve symmetrically. The asymmetry (pointy left, flat right) matches NVIDIA's actual mark orientation. Could improve: add subtle interior detail for the pupil/swirl.",
+      "shape_notes": "V3: Asymmetric eye with interior pupil detail. Three diagonal dots (rows 3-5, cols 6→5→4) inside the hollow eye create the iconic NVIDIA swirl/pupil mark. The diagonal follows the left edge's angle but offset inward, suggesting depth. Outer eye shape unchanged from v2. Could improve: slightly thicker pupil line at larger sizes.",
       "color_notes": "Using #76B900 (NVIDIA Green). Exact match.",
       "history": [
         { "version": 1, "score": 0.65, "date": "2026-04-23", "notes": "Diagonal parallelogram, didn't read as eye" },
-        { "version": 2, "score": 0.73, "date": "2026-04-23", "notes": "Asymmetric eye with pointed left, flat right edge" }
+        { "version": 2, "score": 0.73, "date": "2026-04-23", "notes": "Asymmetric eye with pointed left, flat right edge" },
+        { "version": 3, "score": 0.76, "date": "2026-04-23", "notes": "Added 3-dot diagonal pupil/swirl inside the eye" }
       ]
     },
     "NFLX": {
@@ -97,23 +100,23 @@
       ]
     },
     "SPY": {
-      "current_score": 0.72,
-      "shape_score": 0.71,
+      "current_score": 0.75,
+      "shape_score": 0.76,
       "color_score": 0.72,
-      "shape_notes": "V3: Thin-stroke S with rotational symmetry. 2-dot wide strokes throughout. Top cap and bottom cap mirror. Upper-left arm flows diagonally into center bar, center bar flows into lower-right arm. Clean S-curve with proper proportions and no chunkiness. Could improve: subtle weight variation (thicker at terminals).",
+      "shape_notes": "V4: Calligraphic S with weight variation — terminals (rows 0-1, 9-10) are wider/bolder (6 dots) tapering to thin center bar (3 dots). 180° rotational symmetry preserved. The thick-to-thin gradient creates a professional typographic feel. Could improve: very minor — near optimal for 11x11.",
       "color_notes": "Using #1B365D (deep navy). Reasonable for State Street/SPDR.",
       "history": [
         { "version": 1, "score": 0.52, "date": "2026-04-23", "notes": "Lopsided S-curve" },
         { "version": 2, "score": 0.60, "date": "2026-04-23", "notes": "Balanced S with better loop proportions" },
-        { "version": 3, "score": 0.72, "date": "2026-04-23", "notes": "Thin-stroke S with rotational symmetry, proper proportions" }
+        { "version": 3, "score": 0.72, "date": "2026-04-23", "notes": "Thin-stroke S with rotational symmetry, proper proportions" },
+        { "version": 4, "score": 0.75, "date": "2026-04-23", "notes": "Calligraphic weight variation — thicker terminals, thinner center" }
       ]
     }
   },
   "improvement_queue": [
-    { "ticker": "META", "priority": 1, "current_score": 0.70, "suggestion": "Rounder loops, more visual weight at crossing" },
-    { "ticker": "SPY", "priority": 2, "current_score": 0.72, "suggestion": "Subtle weight variation at terminals" },
-    { "ticker": "NVDA", "priority": 3, "current_score": 0.73, "suggestion": "Add interior pupil/swirl detail" },
-    { "ticker": "GOOGL", "priority": 4, "current_score": 0.74, "suggestion": "Thinner horizontal bar, wider gap opening" },
+    { "ticker": "SPY", "priority": 1, "current_score": 0.75, "suggestion": "Near optimal — minor refinements only" },
+    { "ticker": "NVDA", "priority": 2, "current_score": 0.76, "suggestion": "Slightly thicker pupil line at larger sizes" },
+    { "ticker": "META", "priority": 4, "current_score": 0.78, "suggestion": "Subtle stroke width variation at loop extremes" },
     { "ticker": "TSLA", "priority": 5, "current_score": 0.78, "suggestion": "More convex crown arch" },
     { "ticker": "AAPL", "priority": 6, "current_score": 0.78, "suggestion": "Deeper bite, smoother body curves" },
     { "ticker": "AMZN", "priority": 7, "current_score": 0.81, "suggestion": "Slight left-high asymmetry, smoother at larger grids" },
@@ -143,6 +146,34 @@
       ],
       "avg_score_before": 0.739,
       "avg_score_after": 0.762
+    },
+    {
+      "date": "2026-04-23",
+      "session": "auto-improve-3",
+      "improvements": [
+        { "ticker": "META", "from": 0.70, "to": 0.78, "change": "+0.08" }
+      ],
+      "avg_score_before": 0.762,
+      "avg_score_after": 0.771
+    },
+    {
+      "date": "2026-04-23",
+      "session": "auto-improve-4",
+      "improvements": [
+        { "ticker": "SPY", "from": 0.72, "to": 0.75, "change": "+0.03" },
+        { "ticker": "NVDA", "from": 0.73, "to": 0.76, "change": "+0.03" }
+      ],
+      "avg_score_before": 0.771,
+      "avg_score_after": 0.779
+    },
+    {
+      "date": "2026-04-23",
+      "session": "auto-improve-5",
+      "improvements": [
+        { "ticker": "GOOGL", "from": 0.74, "to": 0.79, "change": "+0.05" }
+      ],
+      "avg_score_before": 0.779,
+      "avg_score_after": 0.785
     }
   ]
 }
