@@ -102,10 +102,12 @@ export default function ChartView() {
         let bars = null;
         try {
           const res = await getBars(symbol, interval);
+          if (cancelled) return; // Chart was removed during API call
           if (res.data.bars && res.data.bars.length > 0) {
             bars = res.data.bars;
           }
         } catch {
+          if (cancelled) return;
           // API not connected — use demo data
         }
 
@@ -113,11 +115,13 @@ export default function ChartView() {
           bars = generateDemoData(interval);
         }
 
+        if (cancelled) return;
+
         candleSeries.setData(bars);
         chart.timeScale().fitContent();
 
         // Add SMA overlay if we have enough data
-        if (bars.length >= 9) {
+        if (bars.length >= 9 && !cancelled) {
           const sma9Data = computeSMA(bars, 9);
           if (sma9Data.length > 0) {
             const sma9Series = chart.addLineSeries({
@@ -131,7 +135,7 @@ export default function ChartView() {
           }
         }
 
-        if (bars.length >= 50) {
+        if (bars.length >= 50 && !cancelled) {
           const sma50Data = computeSMA(bars, 50);
           if (sma50Data.length > 0) {
             const sma50Series = chart.addLineSeries({

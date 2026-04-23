@@ -60,8 +60,8 @@
   --color-surface-light: #1A1A1A;
 
   /* Borders */
-  --color-border: #2A2A2A;
-  --color-border-light: #3A3A3A;
+  --color-border: #333333;
+  --color-border-light: #444444;
 
   /* Text */
   --color-text: #FFFFFF;
@@ -90,7 +90,7 @@
   --grain-opacity: 0.06;
 
   /* Ghost button */
-  --ghost-text: rgba(255, 255, 255, 0.7);
+  --ghost-text: rgba(255, 255, 255, 0.85);
   --ghost-hover-text: var(--color-accent);
 }
 
