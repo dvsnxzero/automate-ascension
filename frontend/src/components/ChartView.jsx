@@ -24,6 +24,8 @@ export default function ChartView() {
   const [chartError, setChartError] = useState(null);
   const [stockInfo, setStockInfo] = useState({ name: "", type: "", exchange: "" });
   const [priceInfo, setPriceInfo] = useState({ price: null, change: null, changePct: null, open: null, high: null, low: null, volume: null });
+  const [dataSource, setDataSource] = useState(null); // "webull" | "yahoo" | "demo"
+  const [noResults, setNoResults] = useState(false);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
   const { isDark } = useTheme();
@@ -124,20 +126,24 @@ export default function ChartView() {
 
         // Try real data first, fall back to demo
         let bars = null;
+        let barSource = "demo";
         try {
           const res = await getBars(symbol, interval);
-          if (cancelled) return; // Chart was removed during API call
+          if (cancelled) return;
           if (res.data.bars && res.data.bars.length > 0) {
             bars = res.data.bars;
+            barSource = res.data.source || "api";
           }
         } catch {
           if (cancelled) return;
-          // API not connected — use demo data
         }
 
         if (!bars || bars.length === 0) {
           bars = generateDemoData(interval);
+          barSource = "demo";
         }
+
+        if (!cancelled) setDataSource(barSource);
 
         if (cancelled) return;
 
@@ -279,12 +285,16 @@ export default function ChartView() {
     }
     setSearchLoading(true);
     setSearchOpen(true);
+    setNoResults(false);
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await searchSymbol(value.trim());
-        setSearchResults(res.data.results || []);
+        const results = res.data.results || [];
+        setSearchResults(results);
+        setNoResults(results.length === 0);
       } catch {
         setSearchResults([]);
+        setNoResults(true);
       } finally {
         setSearchLoading(false);
       }
@@ -302,10 +312,11 @@ export default function ChartView() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      // If results exist, pick the first one; otherwise treat input as ticker
       if (searchResults.length > 0) {
         selectResult(searchResults[0].symbol);
       } else {
+        // Still navigate — the backend will try Yahoo Finance for the ticker
+        // If it's truly invalid, the chart will show the demo data warning
         selectResult(searchInput.trim());
       }
     }
@@ -408,10 +419,14 @@ export default function ChartView() {
                 />
 
                 {/* Autocomplete dropdown */}
-                {searchOpen && (searchResults.length > 0 || searchLoading) && (
+                {searchOpen && (searchResults.length > 0 || searchLoading || noResults) && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto">
                     {searchLoading && searchResults.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-muted">Searching...</div>
+                    ) : noResults && searchResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-muted">
+                        No matches for "<span className="font-semibold text-theme-text">{searchInput}</span>" — try a different ticker or company name
+                      </div>
                     ) : (
                       searchResults.map((r, i) => (
                         <button
@@ -480,6 +495,18 @@ export default function ChartView() {
       {/* Chart + indicators */}
       <div className="flex-1 px-4 md:px-8 pt-4">
         <div className="max-w-7xl mx-auto">
+          {/* Data source badge */}
+          {dataSource === "demo" && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-bear/10 border border-bear/20 text-bear text-xs font-semibold inline-flex items-center gap-2">
+              <span>⚠ Demo data — real prices unavailable for this symbol</span>
+            </div>
+          )}
+          {dataSource === "yahoo" && (
+            <div className="mb-3 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[10px] font-medium inline-flex items-center gap-1.5">
+              Data via Yahoo Finance (delayed)
+            </div>
+          )}
+
           {/* Chart container */}
           {chartError ? (
             <div className="card p-10 text-center mb-4">

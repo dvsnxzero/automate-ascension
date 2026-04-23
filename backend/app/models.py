@@ -282,6 +282,22 @@ class MarketEvent(Base):
     intel_created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class DataAccessLog(Base):
+    """Tracks every external data fetch — source, symbol, latency, status."""
+    __tablename__ = "data_access_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(30), nullable=False, index=True)  # webull / yahoo / finnhub / reddit
+    endpoint: Mapped[str] = mapped_column(String(100), nullable=False)  # bars / quote / search / scrape
+    symbol: Mapped[str | None] = mapped_column(String(20), index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)  # ok / error / fallback
+    response_ms: Mapped[int | None] = mapped_column(Integer)  # latency in ms
+    record_count: Mapped[int | None] = mapped_column(Integer)  # rows/bars returned
+    error_message: Mapped[str | None] = mapped_column(Text)
+    metadata: Mapped[dict | None] = mapped_column(JSON)  # interval, count, etc.
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class SentimentSnapshot(Base):
     """
     Periodic sentiment aggregation — overall market mood from Reddit + news.
