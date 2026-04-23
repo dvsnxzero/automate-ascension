@@ -290,8 +290,10 @@ async def search_symbol(query: str, limit: int = 10):
         return {"query": query, "results": [], "count": 0}
 
     results = []
+    search_source = None
 
     # --- Try Finnhub first ---
+    t0 = time.time()
     try:
         from app.config import get_settings
         settings = get_settings()
@@ -299,7 +301,9 @@ async def search_symbol(query: str, limit: int = 10):
             import finnhub
             client = finnhub.Client(api_key=settings.finnhub_api_key)
             resp = client.symbol_lookup(query)
+            ms = int((time.time() - t0) * 1000)
             if resp and resp.get("count", 0) > 0:
+                search_source = "finnhub"
                 for item in resp.get("result", [])[:limit]:
                     results.append({
                         "symbol": item.get("symbol", ""),
@@ -308,13 +312,18 @@ async def search_symbol(query: str, limit: int = 10):
                         "exchange": item.get("displaySymbol", item.get("symbol", "")),
                         "source": "finnhub",
                     })
+                _log_access("finnhub", "search", query, "ok", ms, len(results))
+            else:
+                _log_access("finnhub", "search", query, "empty", ms, 0)
     except Exception as e:
+        ms = int((time.time() - t0) * 1000)
+        _log_access("finnhub", "search", query, "error", ms, error_message=str(e))
         logger.warning(f"Finnhub search failed for '{query}': {e}")
 
     # --- Fallback to Yahoo Finance if no Finnhub results ---
     if not results:
+        t0 = time.time()
         try:
-            import httpx
             url = "https://query2.finance.yahoo.com/v1/finance/search"
             params = {
                 "q": query,
@@ -330,7 +339,6 @@ async def search_symbol(query: str, limit: int = 10):
                 data = resp.json()
                 for item in data.get("quotes", [])[:limit]:
                     symbol = item.get("symbol", "")
-                    # Skip non-equity types we don't care about
                     qtype = item.get("quoteType", "")
                     results.append({
                         "symbol": symbol,
@@ -339,16 +347,27 @@ async def search_symbol(query: str, limit: int = 10):
                         "exchange": item.get("exchange", ""),
                         "source": "yahoo",
                     })
+            ms = int((time.time() - t0) * 1000)
+            if results:
+                search_source = "yahoo"
+                _log_access("yahoo", "search", query, "ok", ms, len(results))
+            else:
+                _log_access("yahoo", "search", query, "empty", ms, 0)
         except Exception as e:
+            ms = int((time.time() - t0) * 1000)
+            _log_access("yahoo", "search", query, "error", ms, error_message=str(e))
             logger.warning(f"Yahoo Finance search failed for '{query}': {e}")
 
     # --- Last resort: try Webull instrument lookup ---
     if not results:
         wb = _get_client()
         if wb:
+            t0 = time.time()
             try:
                 instrument = wb.get_instrument(query.upper())
+                ms = int((time.time() - t0) * 1000)
                 if instrument:
+                    search_source = "webull"
                     results.append({
                         "symbol": instrument.get("symbol", query.upper()),
                         "name": instrument.get("name", ""),
@@ -356,11 +375,17 @@ async def search_symbol(query: str, limit: int = 10):
                         "exchange": instrument.get("exchange_code", ""),
                         "source": "webull",
                     })
+                    _log_access("webull", "search", query, "ok", ms, 1)
+                else:
+                    _log_access("webull", "search", query, "empty", ms, 0)
             except Exception as e:
+                ms = int((time.time() - t0) * 1000)
+                _log_access("webull", "search", query, "error", ms, error_message=str(e))
                 logger.warning(f"Webull search failed for '{query}': {e}")
 
     return {
         "query": query,
         "results": results,
         "count": len(results),
+        "source": search_source,
     }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Search, Star, TrendingUp } from "lucide-react";
-import { getBars, addToWatchlist, searchSymbol } from "../services/api";
+import { getBars, getQuote, addToWatchlist, searchSymbol } from "../services/api";
 import { useTheme } from "../hooks/useTheme";
 import DotLogo from "./DotLogo";
 
@@ -26,6 +26,7 @@ export default function ChartView() {
   const [priceInfo, setPriceInfo] = useState({ price: null, change: null, changePct: null, open: null, high: null, low: null, volume: null });
   const [dataSource, setDataSource] = useState(null); // "webull" | "yahoo" | "demo"
   const [noResults, setNoResults] = useState(false);
+  const [quoteData, setQuoteData] = useState(null);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
   const { isDark } = useTheme();
@@ -48,6 +49,17 @@ export default function ChartView() {
       if (match) {
         setStockInfo({ name: match.name || "", type: match.type || "", exchange: match.exchange || "" });
       }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [symbol]);
+
+  // Fetch detailed quote data when symbol changes
+  useEffect(() => {
+    let cancelled = false;
+    setQuoteData(null);
+    getQuote(symbol).then((res) => {
+      if (cancelled) return;
+      if (res.data && res.data.price) setQuoteData(res.data);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [symbol]);
@@ -507,6 +519,21 @@ export default function ChartView() {
             </div>
           )}
 
+          {/* Stock detail stats panel */}
+          {quoteData && (
+            <div className="mb-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-px bg-border/30 rounded-xl overflow-hidden border border-border/50">
+              <StatCell label="Open" value={fmt(quoteData.open)} />
+              <StatCell label="High" value={fmt(quoteData.high)} />
+              <StatCell label="Low" value={fmt(quoteData.low)} />
+              <StatCell label="Prev Close" value={fmt(quoteData.prev_close)} />
+              <StatCell label="52W High" value={fmt(quoteData.fifty_two_week_high)} />
+              <StatCell label="52W Low" value={fmt(quoteData.fifty_two_week_low)} />
+              <StatCell label="Volume" value={fmtVol(quoteData.volume)} />
+              <StatCell label="Mkt Cap" value={fmtCap(quoteData.market_cap)} />
+              <StatCell label="Change" value={quoteData.change_pct != null ? `${quoteData.change_pct >= 0 ? "+" : ""}${quoteData.change_pct}%` : "—"} positive={quoteData.change_pct >= 0} />
+            </div>
+          )}
+
           {/* Chart container */}
           {chartError ? (
             <div className="card p-10 text-center mb-4">
@@ -541,6 +568,33 @@ export default function ChartView() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Stat helpers ── */
+function fmt(v) { return v != null ? `$${Number(v).toFixed(2)}` : "—"; }
+function fmtVol(v) {
+  if (v == null) return "—";
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toLocaleString();
+}
+function fmtCap(v) {
+  if (v == null) return "—";
+  if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${v.toLocaleString()}`;
+}
+function StatCell({ label, value, positive }) {
+  return (
+    <div className="bg-surface px-3 py-2">
+      <div className="text-[10px] text-muted font-medium uppercase tracking-wide">{label}</div>
+      <div className={`text-sm font-bold font-mono mt-0.5 ${positive === true ? "text-bull" : positive === false ? "text-bear" : ""}`}>
+        {value}
       </div>
     </div>
   );
