@@ -9,10 +9,11 @@ import {
   BookOpen,
   ArrowUpRight,
   Bell,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
+  Wallet,
+  PieChart,
 } from "lucide-react";
-import { getAccount, getPositions, getWatchlist, healthCheck } from "../services/api";
+import { getAccount, getPositions, getWatchlist, healthCheck, listAccounts } from "../services/api";
 import DotLogo from "./DotLogo";
 import DotSparkline from "./DotSparkline";
 import DotWaffle from "./DotWaffle";
@@ -27,6 +28,8 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState("1M");
   const [activeTab, setActiveTab] = useState("Portfolio");
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [accounts, setAccounts] = useState([]);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
   const cardScrollRef = useRef(null);
 
   const fetchAll = async () => {
@@ -38,6 +41,7 @@ export default function Dashboard() {
         if (r.data.source) setDataSource(r.data.source);
       }),
       getWatchlist().then((r) => setWatchlist(r.data.items || [])),
+      listAccounts().then((r) => setAccounts(r.data.accounts || [])).catch(() => {}),
     ]);
   };
 
@@ -78,15 +82,46 @@ export default function Dashboard() {
   // ========== MOBILE LAYOUT ==========
   const MobileLayout = () => (
     <div className="md:hidden flex flex-col min-h-screen pb-24">
-      {/* Top bar */}
+      {/* Top bar with account switcher */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <div className="text-xs text-muted font-medium font-mono tracking-wider uppercase">
-          {account?.account_type?.toUpperCase() ?? "Paper"} Mode
-        </div>
+        <button
+          onClick={() => setShowAccountPicker(!showAccountPicker)}
+          className="flex items-center gap-1.5 text-xs text-muted font-medium font-mono tracking-wider uppercase active:text-accent transition-colors"
+        >
+          <Wallet size={12} />
+          {account?.account_type?.toUpperCase() ?? "Paper"}{account?.account_id ? ` ···${account.account_id.slice(-4)}` : ""}
+          <ChevronDown size={12} className={`transition-transform ${showAccountPicker ? "rotate-180" : ""}`} />
+        </button>
         <button className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted">
           <Bell size={16} />
         </button>
       </div>
+
+      {/* Account picker dropdown */}
+      {showAccountPicker && (
+        <div className="mx-4 mb-3 rounded-xl bg-surface border border-border overflow-hidden">
+          {accounts.length > 0 ? accounts.map((acc, i) => (
+            <div
+              key={acc.account_id || i}
+              className={`flex items-center justify-between px-4 py-3 ${
+                acc.account_id === account?.account_id ? "bg-accent/10 border-l-2 border-accent" : ""
+              } ${i > 0 ? "border-t border-border" : ""}`}
+            >
+              <div>
+                <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
+                <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
+              </div>
+              {acc.account_id === account?.account_id && (
+                <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
+              )}
+            </div>
+          )) : (
+            <div className="px-4 py-3 text-xs text-muted">
+              {account?.connected ? "1 account connected" : "No accounts connected"}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab chips — scrollable */}
       <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
@@ -155,8 +190,9 @@ export default function Dashboard() {
           {/* Stats row — horizontal scroll */}
           <div className="flex gap-3 px-4 pb-4 overflow-x-auto no-scrollbar">
             <MiniStat label="Buying Power" value={account?.buying_power} icon={DollarSign} />
+            <MiniStat label="Market Value" value={account?.market_value} icon={PieChart} />
+            <MiniStat label="Cash" value={account?.cash_balance} icon={Wallet} />
             <MiniStat label="Day P&L" value={account?.day_pnl ?? "+$0.00"} icon={TrendingUp} positive={account?.day_pnl >= 0} />
-            <MiniStat label="Portfolio" value={account?.total_value} icon={BarChart3} />
           </div>
 
           {/* Portfolio waffle — mobile */}
@@ -164,7 +200,7 @@ export default function Dashboard() {
             <DotWaffle
               holdings={displayPositions.map((p, i) => ({
                 symbol: p.symbol,
-                pct: 100 / displayPositions.length,
+                pct: p.holding_pct || (100 / displayPositions.length),
                 color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A"][i % 4],
               }))}
               totalValue={portfolioValue}
@@ -193,47 +229,78 @@ export default function Dashboard() {
             onScroll={handleCardScroll}
             className="flex gap-4 px-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-4"
           >
-            {displayPositions.map((pos) => (
-              <Link
-                key={pos.symbol}
-                to={`/chart/${pos.symbol}`}
-                className="snap-center shrink-0 w-[85vw] max-w-[340px] rounded-2xl bg-surface border border-border p-5 flex flex-col"
-              >
-                {/* Card header */}
-                <div className="flex items-center gap-3 mb-4">
-                  <DotLogo ticker={pos.symbol} size={48} />
-                  <div className="flex-1">
-                    <div className="font-bold text-base">{pos.symbol}</div>
-                    <div className="text-muted text-xs">{pos.name || pos.symbol}</div>
-                  </div>
-                  <div className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
-                    (pos.change ?? 0) >= 0 ? "bg-accent/10 text-accent" : "bg-bear/10 text-bear"
-                  }`}>
-                    {(pos.change ?? 0) >= 0 ? "+" : ""}{(pos.change ?? 0).toFixed(2)}%
-                  </div>
-                </div>
+            {displayPositions.map((pos) => {
+              const pnl = pos.unrealized_pnl ?? 0;
+              const changePct = pos.change_pct ?? pos.change ?? 0;
+              const isPositive = changePct >= 0;
+              const hasRealData = pos.qty != null;
 
-                {/* Sparkline — full width */}
-                <div className="mb-4">
-                  <DotSparkline positive={(pos.change ?? 0) >= 0} width={280} height={80} dotCount={24} dotRadius={3} />
-                </div>
-
-                {/* Price */}
-                <div className="flex items-end justify-between mt-auto">
-                  <div>
-                    <div className="text-muted text-xs mb-0.5">Last Price</div>
-                    <div className="text-2xl font-black font-tabular">
-                      ${typeof pos.price === "number"
-                        ? pos.price.toLocaleString("en-US", { minimumFractionDigits: 2 })
-                        : pos.price}
+              return (
+                <Link
+                  key={pos.symbol}
+                  to={`/chart/${pos.symbol}`}
+                  className="snap-center shrink-0 w-[85vw] max-w-[340px] rounded-2xl bg-surface border border-border p-5 flex flex-col"
+                >
+                  {/* Card header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <DotLogo ticker={pos.symbol} size={48} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-base">{pos.symbol}</div>
+                      <div className="text-muted text-xs truncate">{pos.name || pos.symbol}</div>
+                    </div>
+                    <div className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                      isPositive ? "bg-accent/10 text-accent" : "bg-bear/10 text-bear"
+                    }`}>
+                      {isPositive ? "+" : ""}{changePct.toFixed(2)}%
                     </div>
                   </div>
-                  <div className="text-accent text-xs font-semibold flex items-center gap-1">
-                    View Chart <ArrowUpRight size={12} />
+
+                  {/* Sparkline */}
+                  <div className="mb-3">
+                    <DotSparkline positive={isPositive} width={280} height={70} dotCount={24} dotRadius={3} />
                   </div>
-                </div>
-              </Link>
-            ))}
+
+                  {/* Position details */}
+                  {hasRealData ? (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
+                      <div>
+                        <div className="text-muted text-[10px]">Shares</div>
+                        <div className="text-sm font-bold font-mono">{pos.qty}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted text-[10px]">Avg Cost</div>
+                        <div className="text-sm font-bold font-mono">${pos.avg_cost?.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted text-[10px]">Mkt Value</div>
+                        <div className="text-sm font-bold font-mono">${pos.market_value?.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted text-[10px]">P&L</div>
+                        <div className={`text-sm font-bold font-mono ${pnl >= 0 ? "text-accent" : "text-bear"}`}>
+                          {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Price + view */}
+                  <div className="flex items-end justify-between mt-auto">
+                    <div>
+                      <div className="text-muted text-xs mb-0.5">{hasRealData ? "Last" : "Price"}</div>
+                      <div className="text-2xl font-black font-tabular">
+                        ${typeof pos.price === "number"
+                          ? pos.price.toLocaleString("en-US", { minimumFractionDigits: 2 })
+                          : pos.price}
+                      </div>
+                    </div>
+                    <div className="text-accent text-xs font-semibold flex items-center gap-1">
+                      Chart <ArrowUpRight size={12} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}
@@ -332,10 +399,20 @@ export default function Dashboard() {
   // ========== DESKTOP LAYOUT (unchanged) ==========
   const DesktopLayout = () => (
     <div className="hidden md:block p-8 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header with account info */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <p className="text-muted text-sm font-medium mb-1">Portfolio overview</p>
+          <div className="flex items-center gap-3 mb-1">
+            <p className="text-muted text-sm font-medium">Portfolio overview</p>
+            <button
+              onClick={() => setShowAccountPicker(!showAccountPicker)}
+              className="flex items-center gap-1 text-[10px] text-muted font-mono bg-surface border border-border rounded-lg px-2 py-1 hover:border-accent hover:text-accent transition-colors"
+            >
+              <Wallet size={10} />
+              {account?.account_type?.toUpperCase() ?? "PAPER"}{account?.account_id ? ` ···${account.account_id.slice(-4)}` : ""}
+              <ChevronDown size={10} />
+            </button>
+          </div>
           <h1 className="text-5xl font-black tracking-tight font-tabular">
             ${typeof portfolioValue === "number"
               ? portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2 })
@@ -346,6 +423,32 @@ export default function Dashboard() {
           <Bell size={18} />
         </button>
       </div>
+
+      {/* Desktop account picker */}
+      {showAccountPicker && (
+        <div className="mb-6 w-64 rounded-xl bg-surface border border-border overflow-hidden">
+          {accounts.length > 0 ? accounts.map((acc, i) => (
+            <div
+              key={acc.account_id || i}
+              className={`flex items-center justify-between px-4 py-3 ${
+                acc.account_id === account?.account_id ? "bg-accent/10 border-l-2 border-accent" : ""
+              } ${i > 0 ? "border-t border-border" : ""}`}
+            >
+              <div>
+                <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
+                <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
+              </div>
+              {acc.account_id === account?.account_id && (
+                <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
+              )}
+            </div>
+          )) : (
+            <div className="px-4 py-3 text-xs text-muted">
+              {account?.connected ? "1 account connected" : "No accounts connected"}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Connection status */}
       {!apiConnected && (
@@ -389,11 +492,12 @@ export default function Dashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-5 gap-3 mb-8">
         <StatCard label="Buying Power" value={account?.buying_power ?? "—"} icon={DollarSign} />
-        <StatCard label="Portfolio" value={account?.total_value ?? "—"} icon={BarChart3} />
+        <StatCard label="Market Value" value={account?.market_value ?? "—"} icon={PieChart} />
+        <StatCard label="Cash" value={account?.cash_balance ?? "—"} icon={Wallet} />
         <StatCard label="Day P&L" value={account?.day_pnl ?? "+$0.00"} icon={account?.day_pnl >= 0 ? TrendingUp : TrendingDown} positive={account?.day_pnl >= 0} />
-        <StatCard label="Mode" value={account?.account_type?.toUpperCase() ?? "PAPER"} icon={BarChart3} isAccent />
+        <StatCard label="Positions" value={positions.length || "—"} icon={BarChart3} isAccent />
       </div>
 
       {/* Portfolio allocation waffle */}
@@ -401,7 +505,7 @@ export default function Dashboard() {
         <DotWaffle
           holdings={displayPositions.map((p, i) => ({
             symbol: p.symbol,
-            pct: 100 / displayPositions.length, // Even split for demo; real data from positions
+            pct: p.holding_pct || (100 / displayPositions.length),
             color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A", "#FF9100", "#00BFA5", "#7B61FF", "#46BDC6"][i % 8],
           }))}
           totalValue={portfolioValue}
@@ -417,37 +521,47 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="space-y-3">
-          {displayPositions.map((pos) => (
-            <Link
-              key={pos.symbol}
-              to={`/chart/${pos.symbol}`}
-              className="card-hover flex items-center gap-4 p-4"
-            >
-              <DotLogo ticker={pos.symbol} size={40} />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm">{pos.name || pos.symbol}</div>
-                <div className="text-muted text-xs">{pos.symbol}</div>
-              </div>
-              <DotSparkline positive={(pos.change ?? pos.change_pct ?? 0) >= 0} width={100} height={40} dotCount={20} dotRadius={2.5} />
-              <div className="text-right">
-                <div className={`text-sm font-semibold px-3 py-1 rounded-lg ${
-                  (pos.change ?? pos.change_pct ?? 0) >= 0
-                    ? "bg-accent/10 text-accent"
-                    : "bg-bear/10 text-bear"
-                }`}>
-                  {typeof pos.price === "number"
-                    ? pos.price.toLocaleString("en-US", { minimumFractionDigits: 2 })
-                    : pos.price}
+          {displayPositions.map((pos) => {
+            const changePct = pos.change_pct ?? pos.change ?? 0;
+            const isPos = changePct >= 0;
+            const pnl = pos.unrealized_pnl ?? 0;
+            const hasReal = pos.qty != null;
+
+            return (
+              <Link
+                key={pos.symbol}
+                to={`/chart/${pos.symbol}`}
+                className="card-hover flex items-center gap-4 p-4"
+              >
+                <DotLogo ticker={pos.symbol} size={40} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm">{pos.name || pos.symbol}</div>
+                  <div className="text-muted text-xs">{pos.symbol}{hasReal ? ` · ${pos.qty} shares` : ""}</div>
                 </div>
-                <div className={`text-xs mt-1 font-medium ${
-                  (pos.change ?? pos.change_pct ?? 0) >= 0 ? "text-accent" : "text-bear"
-                }`}>
-                  {(pos.change ?? pos.change_pct ?? 0) >= 0 ? "+" : ""}
-                  {(pos.change ?? pos.change_pct ?? 0).toFixed(2)}%
+                {hasReal && (
+                  <div className="text-right mr-2">
+                    <div className="text-xs text-muted">Avg ${pos.avg_cost?.toFixed(2)}</div>
+                    <div className={`text-xs font-semibold ${pnl >= 0 ? "text-accent" : "text-bear"}`}>
+                      {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+                <DotSparkline positive={isPos} width={100} height={40} dotCount={20} dotRadius={2.5} />
+                <div className="text-right min-w-[80px]">
+                  <div className={`text-sm font-semibold px-3 py-1 rounded-lg ${
+                    isPos ? "bg-accent/10 text-accent" : "bg-bear/10 text-bear"
+                  }`}>
+                    ${typeof pos.price === "number"
+                      ? pos.price.toLocaleString("en-US", { minimumFractionDigits: 2 })
+                      : pos.price}
+                  </div>
+                  <div className={`text-xs mt-1 font-medium ${isPos ? "text-accent" : "text-bear"}`}>
+                    {isPos ? "+" : ""}{changePct.toFixed(2)}%
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </section>
 
