@@ -365,7 +365,7 @@ export default function ChartView() {
   return (
     <div className="flex flex-col h-full pb-28 md:pb-8">
       {/* Sticky header — stock info + search + intervals */}
-      <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3 max-w-full overflow-x-hidden">
+      <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-[1800px] mx-auto">
           {/* Top row: stock identity + search */}
           <div className="flex items-center gap-3 mb-2">
@@ -557,7 +557,7 @@ export default function ChartView() {
       </div>
 
       {/* Chart + indicators */}
-      <div className="flex-1 px-4 md:px-8 pt-4 min-w-0 max-w-full">
+      <div className="flex-1 px-4 md:px-8 pt-4 min-w-0">
         <div className="max-w-[1800px] mx-auto">
           {/* Data source badge */}
           {dataSource === "demo" && (
@@ -573,7 +573,7 @@ export default function ChartView() {
 
           {/* Stock detail stats panel */}
           {quoteData && (
-            <div className="mb-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-px bg-border/30 rounded-xl overflow-hidden border border-border/50 max-w-full">
+            <div className="mb-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-px bg-border/30 rounded-xl overflow-hidden border border-border/50">
               <StatCell label="Open" value={fmt(quoteData.open)} />
               <StatCell label="High" value={fmt(quoteData.high)} />
               <StatCell label="Low" value={fmt(quoteData.low)} />

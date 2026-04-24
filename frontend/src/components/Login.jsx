@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Fingerprint, KeyRound, ShieldCheck, AlertCircle, Copy, Smartphone, ArrowRight } from "lucide-react";
 import {
   startRegistration,
@@ -14,6 +14,19 @@ export default function Login({ isSetup, onAuthenticated }) {
   const [backupInput, setBackupInput] = useState("");
   const [codesCopied, setCodesCopied] = useState(false);
   const [deviceRegistered, setDeviceRegistered] = useState(false);
+  const autoTriggered = useRef(false);
+
+  // Auto-trigger Face ID / Touch ID on page load for returning users
+  useEffect(() => {
+    if (mode === "login" && !autoTriggered.current && !loading) {
+      autoTriggered.current = true;
+      // Small delay so the UI renders first, then prompt biometrics
+      const timer = setTimeout(() => {
+        handlePasskeyLogin();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasskeySetup = async () => {
     setError(null);
