@@ -585,20 +585,21 @@ export default function ChartView() {
           )}
 
           {/* Chart container */}
-          {chartMode === "dot" && rawBars.length > 0 ? (
+          {chartMode === "dot" && rawBars.length > 0 && (
             <div className="card overflow-hidden mb-4 p-2">
               <DotChart bars={rawBars} symbol={symbol} height={340} />
             </div>
-          ) : chartError ? (
+          )}
+          {chartError && chartMode !== "dot" && (
             <div className="card p-10 text-center mb-4">
               <div className="text-muted text-sm">{chartError}</div>
             </div>
-          ) : (
-            <div
-              ref={chartContainerRef}
-              className="card overflow-hidden mb-4 touch-pan-y"
-            />
           )}
+          <div
+            ref={chartContainerRef}
+            className="card overflow-hidden mb-4 touch-pan-y"
+            style={{ display: chartMode === "dot" ? "none" : undefined }}
+          />
 
           {/* Indicator panels */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
