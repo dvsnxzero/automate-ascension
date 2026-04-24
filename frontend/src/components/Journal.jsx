@@ -607,6 +607,18 @@ export default function Journal() {
         </div>
       </div>
 
+      {/* Data source badge */}
+      {!loading && trades.length === 0 && (
+        <div className="mb-4 px-3 py-2 rounded-xl bg-bear/10 border border-bear/20 inline-flex items-center gap-2">
+          <span className="text-bear text-xs font-semibold">No trades — log manually or sync from Webull</span>
+        </div>
+      )}
+      {!loading && trades.length > 0 && (
+        <div className="mb-4 px-3 py-1.5 rounded-xl bg-accent/10 border border-accent/20 inline-flex items-center gap-2">
+          <span className="text-accent text-[10px] font-medium">{trades.length} trades logged</span>
+        </div>
+      )}
+
       {/* Period filter + Tabs */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <div className="flex bg-surface rounded-xl border border-border overflow-hidden">

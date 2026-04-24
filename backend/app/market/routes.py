@@ -383,9 +383,68 @@ async def search_symbol(query: str, limit: int = 10):
                 _log_access("webull", "search", query, "error", ms, error_message=str(e))
                 logger.warning(f"Webull search failed for '{query}': {e}")
 
+    # --- Generate suggestions if no results ---
+    suggestions = []
+    if not results:
+        suggestions = await _get_suggestions(query, limit=5)
+
     return {
         "query": query,
         "results": results,
         "count": len(results),
         "source": search_source,
+        "suggestions": suggestions if suggestions else None,
     }
+
+
+# Common tickers for fast fuzzy matching when APIs return nothing
+_COMMON_TICKERS = [
+    ("AAPL", "Apple"), ("MSFT", "Microsoft"), ("GOOGL", "Alphabet Google"),
+    ("AMZN", "Amazon"), ("META", "Meta Facebook"), ("TSLA", "Tesla"),
+    ("NVDA", "NVIDIA"), ("NFLX", "Netflix"), ("SPY", "S&P 500 ETF"),
+    ("QQQ", "Nasdaq 100 ETF"), ("VOO", "Vanguard S&P 500"),
+    ("VTI", "Vanguard Total Stock"), ("DIA", "Dow Jones ETF"),
+    ("IWM", "Russell 2000 ETF"), ("ARKK", "ARK Innovation"),
+    ("AMD", "Advanced Micro Devices"), ("INTC", "Intel"),
+    ("BA", "Boeing"), ("DIS", "Disney"), ("JPM", "JPMorgan"),
+    ("V", "Visa"), ("MA", "Mastercard"), ("WMT", "Walmart"),
+    ("KO", "Coca-Cola"), ("PEP", "PepsiCo"), ("NKE", "Nike"),
+    ("COST", "Costco"), ("HD", "Home Depot"), ("CRM", "Salesforce"),
+    ("UBER", "Uber"), ("LYFT", "Lyft"), ("SNAP", "Snapchat"),
+    ("SQ", "Block Square"), ("PYPL", "PayPal"), ("COIN", "Coinbase"),
+    ("PLTR", "Palantir"), ("SOFI", "SoFi"), ("RIVN", "Rivian"),
+    ("LCID", "Lucid"), ("F", "Ford"), ("GM", "General Motors"),
+    ("XOM", "Exxon"), ("CVX", "Chevron"), ("BRK.B", "Berkshire Hathaway"),
+    ("UNH", "UnitedHealth"), ("JNJ", "Johnson Johnson"),
+    ("PFE", "Pfizer"), ("MRNA", "Moderna"), ("ABBV", "AbbVie"),
+    ("T", "AT&T"), ("VZ", "Verizon"), ("TMUS", "T-Mobile"),
+]
+
+
+async def _get_suggestions(query: str, limit: int = 5) -> list:
+    """Generate 'did you mean?' suggestions for failed searches."""
+    q = query.upper().strip()
+    q_lower = query.lower().strip()
+    scored = []
+
+    for ticker, name in _COMMON_TICKERS:
+        score = 0
+        # Exact prefix match on ticker
+        if ticker.startswith(q):
+            score += 10
+        # Substring match on ticker
+        elif q in ticker:
+            score += 6
+        # Name contains query
+        if q_lower in name.lower():
+            score += 8
+        # Levenshtein-lite: character overlap ratio
+        if len(q) >= 2:
+            overlap = sum(1 for c in q if c in ticker)
+            score += (overlap / max(len(q), len(ticker))) * 4
+
+        if score > 2:
+            scored.append({"symbol": ticker, "name": name, "score": score})
+
+    scored.sort(key=lambda x: -x["score"])
+    return [{"symbol": s["symbol"], "name": s["name"]} for s in scored[:limit]]

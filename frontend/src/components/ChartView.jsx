@@ -28,6 +28,7 @@ export default function ChartView() {
   const [dataSource, setDataSource] = useState(null); // "webull" | "yahoo" | "demo"
   const [noResults, setNoResults] = useState(false);
   const [quoteData, setQuoteData] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
   const [chartMode, setChartMode] = useState("candle"); // "candle" | "dot"
   const [rawBars, setRawBars] = useState([]);
   const searchRef = useRef(null);
@@ -307,6 +308,7 @@ export default function ChartView() {
         const res = await searchSymbol(value.trim());
         const results = res.data.results || [];
         setSearchResults(results);
+        setSuggestions(res.data.suggestions || []);
         setNoResults(results.length === 0);
       } catch {
         setSearchResults([]);
@@ -440,8 +442,29 @@ export default function ChartView() {
                     {searchLoading && searchResults.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-muted">Searching...</div>
                     ) : noResults && searchResults.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-muted">
-                        No matches for "<span className="font-semibold text-theme-text">{searchInput}</span>" — try a different ticker or company name
+                      <div className="px-4 py-3">
+                        <div className="text-sm text-muted mb-2">
+                          No matches for "<span className="font-semibold text-theme-text">{searchInput}</span>"
+                        </div>
+                        {suggestions.length > 0 && (
+                          <div>
+                            <div className="text-[10px] text-muted/60 uppercase tracking-wider font-semibold mb-1.5">Did you mean?</div>
+                            {suggestions.map((s, i) => (
+                              <button
+                                key={`sug-${s.symbol}-${i}`}
+                                type="button"
+                                onClick={() => selectResult(s.symbol)}
+                                className="w-full px-2 py-2 flex items-center gap-3 hover:bg-surface-light transition-colors text-left rounded-lg"
+                              >
+                                <DotLogo ticker={s.symbol} size={28} className="shrink-0" />
+                                <div>
+                                  <span className="font-bold text-xs">{s.symbol}</span>
+                                  <span className="text-xs text-muted ml-2">{s.name}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       searchResults.map((r, i) => (

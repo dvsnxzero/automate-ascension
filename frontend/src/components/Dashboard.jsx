@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [positions, setPositions] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
+  const [dataSource, setDataSource] = useState("demo"); // "webull" | "demo"
   const [timeRange, setTimeRange] = useState("1M");
   const [activeTab, setActiveTab] = useState("Portfolio");
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -33,7 +34,10 @@ export default function Dashboard() {
       .catch(() => setApiConnected(false));
 
     getAccount().then((r) => setAccount(r.data)).catch(() => {});
-    getPositions().then((r) => setPositions(r.data.positions || [])).catch(() => {});
+    getPositions().then((r) => {
+      setPositions(r.data.positions || []);
+      if (r.data.source) setDataSource(r.data.source);
+    }).catch(() => {});
     getWatchlist().then((r) => setWatchlist(r.data.items || [])).catch(() => {});
   }, []);
 
@@ -102,6 +106,17 @@ export default function Dashboard() {
         <div className="mx-4 mb-3 px-4 py-3 rounded-xl bg-surface border border-border flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-bear animate-pulse" />
           <span className="text-xs text-muted">Backend offline</span>
+        </div>
+      )}
+      {apiConnected && dataSource === "demo" && (
+        <div className="mx-4 mb-3 px-3 py-2 rounded-xl bg-bear/10 border border-bear/20 flex items-center gap-2">
+          <span className="text-bear text-xs font-semibold">⚠ Demo data — Webull not connected</span>
+        </div>
+      )}
+      {apiConnected && dataSource === "webull" && (
+        <div className="mx-4 mb-3 px-3 py-1.5 rounded-xl bg-accent/10 border border-accent/20 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="text-accent text-[10px] font-medium">Live via Webull</span>
         </div>
       )}
 
@@ -338,6 +353,17 @@ export default function Dashboard() {
               cd backend && uvicorn app.main:app --reload
             </code>
           </span>
+        </div>
+      )}
+      {apiConnected && dataSource === "demo" && (
+        <div className="mb-6 px-4 py-2.5 rounded-xl bg-bear/10 border border-bear/20 inline-flex items-center gap-2">
+          <span className="text-bear text-xs font-semibold">⚠ Demo data — Webull not connected</span>
+        </div>
+      )}
+      {apiConnected && dataSource === "webull" && (
+        <div className="mb-6 px-3 py-1.5 rounded-xl bg-accent/10 border border-accent/20 inline-flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="text-accent text-[10px] font-medium">Live via Webull</span>
         </div>
       )}
 

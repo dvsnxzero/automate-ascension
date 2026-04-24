@@ -112,7 +112,7 @@ async def get_positions():
     """Get current open positions."""
     wb = _get_client()
     if not wb:
-        return {"positions": [], "message": "Webull API not connected"}
+        return {"positions": [], "source": "demo", "message": "Webull API not connected"}
 
     try:
         holdings = wb.get_positions()
@@ -132,7 +132,7 @@ async def get_positions():
                 "holding_pct": float(h.get("holding_proportion", 0) or 0) * 100,
             })
 
-        return {"positions": positions, "count": len(positions)}
+        return {"positions": positions, "count": len(positions), "source": "webull"}
     except Exception as e:
         logger.error(f"Positions fetch failed: {e}")
         return {"positions": [], "message": f"Error: {str(e)}"}
