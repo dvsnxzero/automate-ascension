@@ -5,10 +5,11 @@
  * Provides offline shell so the app loads even without connectivity.
  */
 
-const CACHE_NAME = "ascension-v1";
+const CACHE_NAME = "ascension-v2";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
+  "/offline.html",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
@@ -58,9 +59,9 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => {
           // If network fails and we have a cached response, use it
-          // For navigation requests, return the shell
+          // For navigation requests, try the shell first, then offline page
           if (request.mode === "navigate") {
-            return caches.match("/index.html");
+            return caches.match("/index.html") || caches.match("/offline.html");
           }
           return cached;
         });

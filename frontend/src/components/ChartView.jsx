@@ -603,27 +603,13 @@ export default function ChartView() {
             style={{ display: chartMode === "dot" ? "none" : undefined }}
           />
 
-          {/* Indicator panels */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="card p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-accent">RSI (14)</h3>
-                <span className="text-xs text-muted font-mono">—</span>
-              </div>
-              <div className="text-muted text-xs">
-                Connect Webull API to see live RSI
-              </div>
+          {/* Indicator panels — computed from bar data */}
+          {rawBars.length >= 14 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <RSIPanel bars={rawBars} />
+              <MACDPanel bars={rawBars} />
             </div>
-            <div className="card p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-accent">MACD</h3>
-                <span className="text-xs text-muted font-mono">—</span>
-              </div>
-              <div className="text-muted text-xs">
-                Connect Webull API to see live MACD
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -671,6 +657,190 @@ function computeSMA(bars, period) {
     });
   }
   return result;
+}
+
+/* ── RSI calculation ── */
+function computeRSI(bars, period = 14) {
+  if (bars.length < period + 1) return [];
+  const rsi = [];
+  let avgGain = 0, avgLoss = 0;
+
+  // Seed with first `period` changes
+  for (let i = 1; i <= period; i++) {
+    const delta = bars[i].close - bars[i - 1].close;
+    if (delta > 0) avgGain += delta;
+    else avgLoss += Math.abs(delta);
+  }
+  avgGain /= period;
+  avgLoss /= period;
+
+  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+  rsi.push({ time: bars[period].time, value: +(100 - 100 / (1 + rs)).toFixed(2) });
+
+  for (let i = period + 1; i < bars.length; i++) {
+    const delta = bars[i].close - bars[i - 1].close;
+    const gain = delta > 0 ? delta : 0;
+    const loss = delta < 0 ? Math.abs(delta) : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    const r = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    rsi.push({ time: bars[i].time, value: +(100 - 100 / (1 + r)).toFixed(2) });
+  }
+  return rsi;
+}
+
+/* ── MACD calculation ── */
+function computeEMA(bars, period) {
+  const k = 2 / (period + 1);
+  const ema = [{ time: bars[0].time, value: bars[0].close }];
+  for (let i = 1; i < bars.length; i++) {
+    ema.push({
+      time: bars[i].time,
+      value: bars[i].close * k + ema[i - 1].value * (1 - k),
+    });
+  }
+  return ema;
+}
+
+function computeMACD(bars, fast = 12, slow = 26, signal = 9) {
+  if (bars.length < slow + signal) return { macd: [], signal: [], histogram: [] };
+  const emaFast = computeEMA(bars, fast);
+  const emaSlow = computeEMA(bars, slow);
+
+  const macdLine = [];
+  for (let i = 0; i < bars.length; i++) {
+    macdLine.push({
+      time: bars[i].time,
+      value: +(emaFast[i].value - emaSlow[i].value).toFixed(4),
+    });
+  }
+
+  // Signal line = EMA of MACD line
+  const signalK = 2 / (signal + 1);
+  const signalLine = [{ time: macdLine[0].time, value: macdLine[0].value }];
+  for (let i = 1; i < macdLine.length; i++) {
+    signalLine.push({
+      time: macdLine[i].time,
+      value: +(macdLine[i].value * signalK + signalLine[i - 1].value * (1 - signalK)).toFixed(4),
+    });
+  }
+
+  const histogram = macdLine.map((m, i) => ({
+    time: m.time,
+    value: +(m.value - signalLine[i].value).toFixed(4),
+  }));
+
+  return { macd: macdLine, signal: signalLine, histogram };
+}
+
+/* ── Mini SVG sparkline ── */
+function Sparkline({ data, width = 200, height = 40, color = "var(--color-accent)", zones }) {
+  if (!data || data.length < 2) return null;
+  const values = data.map((d) => d.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x},${y}`;
+  }).join(" ");
+
+  return (
+    <svg width={width} height={height} className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      {zones && zones.map((z, i) => {
+        const y1 = height - ((z.max - min) / range) * height;
+        const y2 = height - ((z.min - min) / range) * height;
+        return <rect key={i} x={0} y={Math.max(0, y1)} width={width} height={Math.max(0, y2 - y1)} fill={z.color} opacity={0.08} />;
+      })}
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/* ── MACD histogram mini chart ── */
+function MACDHistogramChart({ histogram, width = 200, height = 40 }) {
+  if (!histogram || histogram.length < 2) return null;
+  const values = histogram.map((d) => d.value);
+  const absMax = Math.max(...values.map(Math.abs)) || 1;
+  const barW = Math.max(1, width / values.length - 0.5);
+
+  return (
+    <svg width={width} height={height} className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke="var(--color-border)" strokeWidth="0.5" />
+      {values.map((v, i) => {
+        const x = (i / values.length) * width;
+        const barH = (Math.abs(v) / absMax) * (height / 2);
+        const y = v >= 0 ? height / 2 - barH : height / 2;
+        return <rect key={i} x={x} y={y} width={barW} height={barH} fill={v >= 0 ? "var(--color-bull)" : "var(--color-bear)"} opacity={0.7} />;
+      })}
+    </svg>
+  );
+}
+
+/* ── RSI Panel component ── */
+function RSIPanel({ bars }) {
+  const rsiData = computeRSI(bars, 14);
+  if (rsiData.length === 0) return null;
+  const current = rsiData[rsiData.length - 1].value;
+  const label = current >= 70 ? "Overbought" : current <= 30 ? "Oversold" : "Neutral";
+  const labelColor = current >= 70 ? "text-bear" : current <= 30 ? "text-bull" : "text-muted";
+
+  // Zone highlights for the sparkline
+  const zones = [
+    { min: 70, max: 100, color: "var(--color-bear)" },
+    { min: 0, max: 30, color: "var(--color-bull)" },
+  ];
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold text-accent">RSI (14)</h3>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-semibold ${labelColor}`}>{label}</span>
+          <span className="text-sm font-black font-mono">{current.toFixed(1)}</span>
+        </div>
+      </div>
+      <div className="mt-2 rounded overflow-hidden">
+        <Sparkline data={rsiData.slice(-60)} height={48} color="var(--color-accent)" zones={zones} />
+      </div>
+      <div className="flex justify-between mt-1 text-[9px] text-muted font-mono">
+        <span>30</span>
+        <span>50</span>
+        <span>70</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── MACD Panel component ── */
+function MACDPanel({ bars }) {
+  const { macd, signal, histogram } = computeMACD(bars);
+  if (macd.length === 0) return null;
+  const lastMACD = macd[macd.length - 1].value;
+  const lastSignal = signal[signal.length - 1].value;
+  const lastHist = histogram[histogram.length - 1].value;
+  const crossLabel = lastMACD > lastSignal ? "Bullish" : "Bearish";
+  const crossColor = lastMACD > lastSignal ? "text-bull" : "text-bear";
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold text-accent">MACD</h3>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-semibold ${crossColor}`}>{crossLabel}</span>
+          <span className="text-sm font-black font-mono">{lastHist >= 0 ? "+" : ""}{lastHist.toFixed(2)}</span>
+        </div>
+      </div>
+      <div className="mt-2 rounded overflow-hidden">
+        <MACDHistogramChart histogram={histogram.slice(-60)} height={48} />
+      </div>
+      <div className="flex justify-between mt-1 text-[9px] text-muted font-mono">
+        <span>MACD {lastMACD.toFixed(2)}</span>
+        <span>Signal {lastSignal.toFixed(2)}</span>
+      </div>
+    </div>
+  );
 }
 
 /* ── Demo data generator ── */

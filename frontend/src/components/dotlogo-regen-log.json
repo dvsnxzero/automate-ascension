@@ -84,12 +84,16 @@
       "current_score": 0.76,
       "shape_score": 0.78,
       "color_score": 0.70,
-      "shape_notes": "V3: Asymmetric eye with interior pupil detail. Three diagonal dots (rows 3-5, cols 6→5→4) inside the hollow eye create the iconic NVIDIA swirl/pupil mark. The diagonal follows the left edge's angle but offset inward, suggesting depth. Outer eye shape unchanged from v2. Could improve: slightly thicker pupil line at larger sizes.",
+      "shape_notes": "V4: Thicker eye outline with bolder 2-dot pupil swoosh (rows 3-5). Eye tapers more naturally bottom-to-top. Smoother closure at bottom. Reads clearly as NVIDIA eye mark at all sizes.",
       "color_notes": "Using #76B900 (NVIDIA Green). Exact match.",
+      "current_score": 0.80,
+      "shape_score": 0.82,
+      "color_score": 0.74,
       "history": [
         { "version": 1, "score": 0.65, "date": "2026-04-23", "notes": "Diagonal parallelogram, didn't read as eye" },
         { "version": 2, "score": 0.73, "date": "2026-04-23", "notes": "Asymmetric eye with pointed left, flat right edge" },
-        { "version": 3, "score": 0.76, "date": "2026-04-23", "notes": "Added 3-dot diagonal pupil/swirl inside the eye" }
+        { "version": 3, "score": 0.76, "date": "2026-04-23", "notes": "Added 3-dot diagonal pupil/swirl inside the eye" },
+        { "version": 4, "score": 0.80, "date": "2026-04-24", "notes": "Bolder outline, thicker pupil swoosh, smoother bottom taper" }
       ]
     },
     "NFLX": {
@@ -103,24 +107,25 @@
       ]
     },
     "SPY": {
-      "current_score": 0.75,
-      "shape_score": 0.76,
+      "current_score": 0.78,
+      "shape_score": 0.80,
       "color_score": 0.72,
-      "shape_notes": "V4: Calligraphic S with weight variation — terminals (rows 0-1, 9-10) are wider/bolder (6 dots) tapering to thin center bar (3 dots). 180° rotational symmetry preserved. The thick-to-thin gradient creates a professional typographic feel. Could improve: very minor — near optimal for 11x11.",
+      "shape_notes": "V5: Centered S with even stroke weight, smoother curves top and bottom. Upper loop (rows 0-4) and lower loop (rows 6-10) are mirror images. Proper 2-dot stroke throughout with clean open counters. Near-perfect rotational symmetry.",
       "color_notes": "Using #1B365D (deep navy). Reasonable for State Street/SPDR.",
       "history": [
         { "version": 1, "score": 0.52, "date": "2026-04-23", "notes": "Lopsided S-curve" },
         { "version": 2, "score": 0.60, "date": "2026-04-23", "notes": "Balanced S with better loop proportions" },
         { "version": 3, "score": 0.72, "date": "2026-04-23", "notes": "Thin-stroke S with rotational symmetry, proper proportions" },
-        { "version": 4, "score": 0.75, "date": "2026-04-23", "notes": "Calligraphic weight variation — thicker terminals, thinner center" }
+        { "version": 4, "score": 0.75, "date": "2026-04-23", "notes": "Calligraphic weight variation — thicker terminals, thinner center" },
+        { "version": 5, "score": 0.78, "date": "2026-04-24", "notes": "Even stroke weight, smoother curves, better top/bottom symmetry" }
       ]
     }
   },
   "improvement_queue": [
-    { "ticker": "SPY", "priority": 1, "current_score": 0.75, "suggestion": "Near optimal — minor refinements only" },
-    { "ticker": "NVDA", "priority": 2, "current_score": 0.76, "suggestion": "Slightly thicker pupil line at larger sizes" },
-    { "ticker": "META", "priority": 3, "current_score": 0.78, "suggestion": "Subtle stroke width variation at loop extremes" },
-    { "ticker": "GOOGL", "priority": 4, "current_score": 0.79, "suggestion": "Near optimal" },
+    { "ticker": "META", "priority": 1, "current_score": 0.78, "suggestion": "Subtle stroke width variation at loop extremes" },
+    { "ticker": "SPY", "priority": 2, "current_score": 0.78, "suggestion": "Near optimal — even weight S" },
+    { "ticker": "GOOGL", "priority": 3, "current_score": 0.79, "suggestion": "Near optimal" },
+    { "ticker": "NVDA", "priority": 4, "current_score": 0.80, "suggestion": "Near optimal — eye mark reads clearly" },
     { "ticker": "AAPL", "priority": 5, "current_score": 0.81, "suggestion": "Near optimal — bite is clear" },
     { "ticker": "TSLA", "priority": 6, "current_score": 0.82, "suggestion": "Near optimal — crown arch defined" },
     { "ticker": "NFLX", "priority": 7, "current_score": 0.82, "suggestion": "Thinner diagonal for ribbon feel" },
@@ -189,6 +194,16 @@
       ],
       "avg_score_before": 0.785,
       "avg_score_after": 0.805
+    },
+    {
+      "date": "2026-04-24",
+      "session": "auto-improve-7",
+      "improvements": [
+        { "ticker": "SPY", "from": 0.75, "to": 0.78, "change": "+0.03" },
+        { "ticker": "NVDA", "from": 0.76, "to": 0.80, "change": "+0.04" }
+      ],
+      "avg_score_before": 0.805,
+      "avg_score_after": 0.816
     }
   ]
 }

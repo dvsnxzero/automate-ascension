@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#DCFC36" />
+  <title>Offline — Ascension</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .logo-wrap {
+      width: 80px; height: 80px;
+      background: #DCFC36;
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 2rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .logo-wrap svg { width: 48px; height: 48px; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+    }
+    .accent { color: #DCFC36; }
+    p {
+      color: #888;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      max-width: 360px;
+      margin-bottom: 2rem;
+    }
+    .retry-btn {
+      background: #DCFC36;
+      color: #000;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .retry-btn:active { transform: scale(0.96); opacity: 0.9; }
+    .status-dots {
+      display: flex; gap: 6px;
+      margin-top: 2.5rem;
+    }
+    .status-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #333;
+    }
+    .status-dots span:nth-child(1) { background: #DCFC36; animation: blink 1.4s 0s infinite; }
+    .status-dots span:nth-child(2) { animation: blink 1.4s 0.2s infinite; }
+    .status-dots span:nth-child(3) { animation: blink 1.4s 0.4s infinite; }
+    @keyframes blink {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; background: #DCFC36; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-wrap">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.5 4L7.5 18.5H16L13.5 28L24.5 13.5H16L18.5 4Z" fill="#000"/>
+    </svg>
+  </div>
+  <h1>You're <span class="accent">offline</span></h1>
+  <p>No internet connection detected. Market data and portfolio updates need a live connection. Your cached pages are still available.</p>
+  <button class="retry-btn" onclick="window.location.reload()">Try again</button>
+  <div class="status-dots">
+    <span></span><span></span><span></span>
+  </div>
+</body>
+</html>
