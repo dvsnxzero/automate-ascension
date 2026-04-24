@@ -38,7 +38,10 @@ export default function ChartView() {
   // Responsive chart height
   const getChartHeight = () => {
     if (typeof window === "undefined") return 400;
-    return window.innerWidth < 768 ? 320 : 500;
+    const w = window.innerWidth;
+    if (w < 768) return 320;
+    if (w >= 1400) return 620;
+    return 500;
   };
 
   // Fetch company name when symbol changes
@@ -363,7 +366,7 @@ export default function ChartView() {
     <div className="flex flex-col h-full pb-28 md:pb-8">
       {/* Sticky header — stock info + search + intervals */}
       <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1800px] mx-auto">
           {/* Top row: stock identity + search */}
           <div className="flex items-center gap-3 mb-2">
             {/* Stock identity block */}
@@ -438,7 +441,7 @@ export default function ChartView() {
 
                 {/* Autocomplete dropdown */}
                 {searchOpen && (searchResults.length > 0 || searchLoading || noResults) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto">
+                  <div className="absolute top-full right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto w-72 md:w-80">
                     {searchLoading && searchResults.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-muted">Searching...</div>
                     ) : noResults && searchResults.length === 0 ? (
@@ -472,21 +475,20 @@ export default function ChartView() {
                           key={`${r.symbol}-${i}`}
                           type="button"
                           onClick={() => selectResult(r.symbol)}
-                          className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-surface-light transition-colors text-left"
+                          className="w-full px-3 py-2 flex items-center gap-2.5 hover:bg-surface-light transition-colors text-left"
                         >
-                          <DotLogo ticker={r.symbol} size={32} className="shrink-0" />
+                          <DotLogo ticker={r.symbol} size={24} className="shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm">{r.symbol}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs">{r.symbol}</span>
                               {r.type && (
-                                <span className="text-[10px] font-medium text-muted bg-surface-light px-1.5 py-0.5 rounded">
+                                <span className="text-[9px] font-medium text-muted bg-surface-light px-1 py-0.5 rounded truncate max-w-[80px]">
                                   {r.type}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-muted truncate">{r.name}</div>
+                            <div className="text-[11px] text-muted truncate">{r.name}</div>
                           </div>
-                          <span className="text-[10px] text-muted/50 shrink-0">{r.exchange}</span>
                         </button>
                       ))
                     )}
@@ -556,7 +558,7 @@ export default function ChartView() {
 
       {/* Chart + indicators */}
       <div className="flex-1 px-4 md:px-8 pt-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1800px] mx-auto">
           {/* Data source badge */}
           {dataSource === "demo" && (
             <div className="mb-3 px-3 py-2 rounded-lg bg-bear/10 border border-bear/20 text-bear text-xs font-semibold inline-flex items-center gap-2">
@@ -571,7 +573,7 @@ export default function ChartView() {
 
           {/* Stock detail stats panel */}
           {quoteData && (
-            <div className="mb-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-px bg-border/30 rounded-xl overflow-hidden border border-border/50">
+            <div className="mb-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-px bg-border/30 rounded-xl overflow-hidden border border-border/50">
               <StatCell label="Open" value={fmt(quoteData.open)} />
               <StatCell label="High" value={fmt(quoteData.high)} />
               <StatCell label="Low" value={fmt(quoteData.low)} />
@@ -587,7 +589,7 @@ export default function ChartView() {
           {/* Chart container */}
           {chartMode === "dot" && rawBars.length > 0 && (
             <div className="card overflow-hidden mb-4 p-2">
-              <DotChart bars={rawBars} symbol={symbol} height={340} />
+              <DotChart bars={rawBars} symbol={symbol} height={typeof window !== "undefined" && window.innerWidth >= 1400 ? 560 : 340} />
             </div>
           )}
           {chartError && chartMode !== "dot" && (

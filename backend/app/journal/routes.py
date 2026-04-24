@@ -126,7 +126,12 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
 
 @router.post("/orders/sync")
 async def sync_orders(db: Session = Depends(get_db)):
-    """Sync today's orders from Webull into the journal."""
+    """Sync today's orders from Webull into the journal.
+
+    Webull returns nested structure: each order has an `items` array
+    containing the individual line items (symbol, side, qty, etc.).
+    We flatten these into one Order row per item.
+    """
     try:
         from app.webull_client import get_webull
         wb = get_webull()
@@ -134,40 +139,65 @@ async def sync_orders(db: Session = Depends(get_db)):
 
         synced = 0
         for wo in webull_orders:
-            order_id = str(wo.get("order_id", wo.get("client_order_id", "")))
-            if not order_id:
-                continue
+            # Webull nests trade details inside "items" array
+            items = wo.get("items", [])
+            # If no items, treat the order itself as a flat item (legacy format)
+            if not items:
+                items = [wo]
 
-            existing = db.query(Order).filter(Order.webull_order_id == order_id).first()
-            if existing:
-                # Update status
-                existing.status = _map_webull_status(wo.get("status", ""))
-                existing.filled_price = wo.get("filled_price") or wo.get("avg_price")
-                existing.filled_quantity = wo.get("filled_quantity")
-                existing.raw_json = wo
-                existing.synced_at = datetime.utcnow()
-                if existing.status == "FILLED" and not existing.filled_at:
-                    existing.filled_at = datetime.utcnow()
-            else:
-                new_order = Order(
-                    webull_order_id=order_id,
-                    client_order_id=wo.get("client_order_id"),
-                    symbol=wo.get("symbol", "UNKNOWN"),
-                    side=wo.get("side", "BUY").upper(),
-                    order_type=wo.get("order_type", "MARKET").upper(),
-                    quantity=float(wo.get("quantity", 0)),
-                    limit_price=wo.get("limit_price"),
-                    filled_price=wo.get("filled_price") or wo.get("avg_price"),
-                    filled_quantity=wo.get("filled_quantity"),
-                    status=_map_webull_status(wo.get("status", "")),
-                    is_paper=True,
-                    raw_json=wo,
-                    synced_at=datetime.utcnow(),
+            for item in items:
+                order_id = str(
+                    wo.get("order_id")
+                    or wo.get("client_order_id")
+                    or item.get("order_id")
+                    or ""
                 )
-                if new_order.status == "FILLED":
-                    new_order.filled_at = datetime.utcnow()
-                db.add(new_order)
-                synced += 1
+                # Append item index if multiple items per order
+                item_symbol = (item.get("symbol") or wo.get("symbol") or "UNKNOWN").upper()
+                item_key = f"{order_id}_{item_symbol}" if len(items) > 1 else order_id
+                if not order_id:
+                    continue
+
+                existing = db.query(Order).filter(Order.webull_order_id == item_key).first()
+                if existing:
+                    existing.status = _map_webull_status(
+                        item.get("order_status") or item.get("status") or wo.get("status") or ""
+                    )
+                    existing.filled_price = _safe_float(
+                        item.get("filled_price") or item.get("avg_price")
+                    )
+                    existing.filled_quantity = _safe_float(item.get("filled_qty"))
+                    existing.raw_json = wo
+                    existing.synced_at = datetime.utcnow()
+                    if existing.status == "FILLED" and not existing.filled_at:
+                        ts = item.get("place_time") or item.get("filled_time")
+                        existing.filled_at = _parse_ts(ts) or datetime.utcnow()
+                else:
+                    status = _map_webull_status(
+                        item.get("order_status") or item.get("status") or wo.get("status") or ""
+                    )
+                    ts = item.get("place_time") or item.get("filled_time")
+                    new_order = Order(
+                        webull_order_id=item_key,
+                        client_order_id=wo.get("client_order_id"),
+                        symbol=item_symbol,
+                        side=(item.get("side") or wo.get("side") or "BUY").upper(),
+                        order_type=(item.get("order_type") or wo.get("order_type") or "MARKET").upper(),
+                        quantity=float(item.get("qty") or item.get("quantity") or 0),
+                        limit_price=_safe_float(item.get("limit_price")),
+                        filled_price=_safe_float(
+                            item.get("filled_price") or item.get("avg_price")
+                        ),
+                        filled_quantity=_safe_float(item.get("filled_qty")),
+                        status=status,
+                        is_paper=True,
+                        raw_json=wo,
+                        synced_at=datetime.utcnow(),
+                    )
+                    if status == "FILLED":
+                        new_order.filled_at = _parse_ts(ts) or datetime.utcnow()
+                    db.add(new_order)
+                    synced += 1
 
         db.commit()
         return {"synced": synced, "total_webull_orders": len(webull_orders)}
@@ -525,3 +555,25 @@ def _map_webull_status(status: str) -> str:
     if status in ("REJECTED", "FAILED"):
         return "REJECTED"
     return "PENDING"
+
+
+def _safe_float(val) -> Optional[float]:
+    """Safely convert a value to float, returning None on failure."""
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_ts(val) -> Optional[datetime]:
+    """Parse a Webull timestamp string to datetime."""
+    if not val:
+        return None
+    try:
+        if isinstance(val, (int, float)):
+            return datetime.utcfromtimestamp(val / 1000 if val > 1e12 else val)
+        return datetime.fromisoformat(str(val).replace("Z", "+00:00").replace("+00:00", ""))
+    except Exception:
+        return None

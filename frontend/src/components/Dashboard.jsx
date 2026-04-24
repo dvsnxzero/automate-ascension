@@ -16,6 +16,7 @@ import { getAccount, getPositions, getWatchlist, healthCheck } from "../services
 import DotLogo from "./DotLogo";
 import DotSparkline from "./DotSparkline";
 import DotWaffle from "./DotWaffle";
+import usePullToRefresh from "../hooks/usePullToRefresh";
 
 export default function Dashboard() {
   const [account, setAccount] = useState(null);
@@ -28,18 +29,21 @@ export default function Dashboard() {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const cardScrollRef = useRef(null);
 
-  useEffect(() => {
-    healthCheck()
-      .then(() => setApiConnected(true))
-      .catch(() => setApiConnected(false));
+  const fetchAll = async () => {
+    await Promise.allSettled([
+      healthCheck().then(() => setApiConnected(true)).catch(() => setApiConnected(false)),
+      getAccount().then((r) => setAccount(r.data)),
+      getPositions().then((r) => {
+        setPositions(r.data.positions || []);
+        if (r.data.source) setDataSource(r.data.source);
+      }),
+      getWatchlist().then((r) => setWatchlist(r.data.items || [])),
+    ]);
+  };
 
-    getAccount().then((r) => setAccount(r.data)).catch(() => {});
-    getPositions().then((r) => {
-      setPositions(r.data.positions || []);
-      if (r.data.source) setDataSource(r.data.source);
-    }).catch(() => {});
-    getWatchlist().then((r) => setWatchlist(r.data.items || [])).catch(() => {});
-  }, []);
+  const { pullRef, pulling, pullDistance, refreshing } = usePullToRefresh(fetchAll);
+
+  useEffect(() => { fetchAll(); }, []);
 
   const demoPositions = [
     { symbol: "AAPL", name: "Apple", price: 273.25, change: 8.73 },
@@ -487,10 +491,21 @@ export default function Dashboard() {
   );
 
   return (
-    <>
+    <div ref={pullRef}>
+      {/* Pull-to-refresh indicator */}
+      {(pulling || refreshing) && (
+        <div
+          className="flex items-center justify-center transition-all duration-200 overflow-hidden"
+          style={{ height: pullDistance }}
+        >
+          <div className={`w-5 h-5 rounded-full border-2 border-accent border-t-transparent ${refreshing ? "animate-spin" : ""}`}
+            style={{ opacity: Math.min(pullDistance / 80, 1) }}
+          />
+        </div>
+      )}
       <MobileLayout />
       <DesktopLayout />
-    </>
+    </div>
   );
 }
 
