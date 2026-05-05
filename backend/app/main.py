@@ -20,6 +20,9 @@ from app.auth.passkey import router as passkey_router
 from app.journal.routes import router as journal_router
 from app.intel.routes import router as intel_router
 from app.notes.routes import router as notes_router
+from app.backtest.routes import router as backtest_router
+# Import models so they register on Base.metadata before create_all runs
+from app.backtest import models as _backtest_models  # noqa: F401
 
 
 # ─── Auth middleware ───
@@ -126,6 +129,7 @@ app.include_router(strategy_router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(intel_router, prefix="/api/intel", tags=["intel"])
 app.include_router(notes_router, prefix="/api/notes", tags=["notes"])
+app.include_router(backtest_router, prefix="/api/backtest", tags=["backtest"])
 
 
 # ─── Build version ───

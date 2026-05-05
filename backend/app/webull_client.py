@@ -157,6 +157,10 @@ class WebullClient:
         self.app_secret = app_secret
         self._account_id: Optional[str] = None
         self._http = httpx.Client(timeout=15.0)
+        # Symbol → resolved category ("US_STOCK" or "US_ETF"), populated on
+        # first successful instrument/bar fetch so subsequent calls skip the
+        # wrong-category retry. Cache lives for the process lifetime.
+        self._category_cache: dict[str, str] = {}
 
     # ─── Internal helpers ─────────────────────────────────────
 
@@ -257,19 +261,54 @@ class WebullClient:
 
     # ─── Instruments ──────────────────────────────────────────
 
-    def get_instrument(self, symbol: str, category: str = "US_STOCK") -> Optional[dict]:
-        """Look up instrument details for a symbol."""
-        data = self._market_get("/instrument/list", {
-            "symbols": symbol.upper(),
-            "category": category,
-        })
-        if isinstance(data, list) and len(data) > 0:
-            return data[0]
-        elif isinstance(data, dict) and not data.get("error"):
-            return data
+    @staticmethod
+    def _is_invalid_symbol_error(data) -> bool:
+        """Detect Webull's INVALID_SYMBOL error in either an `error` envelope
+        or a raw 417 detail string."""
+        if not isinstance(data, dict):
+            return False
+        if data.get("error_code") == "INVALID_SYMBOL":
+            return True
+        detail = data.get("detail") or ""
+        return "INVALID_SYMBOL" in str(detail)
+
+    def _categories_to_try(self, symbol: str) -> list[str]:
+        """Return categories in priority order: cached first (single try),
+        else the full US_STOCK → US_ETF fallback chain."""
+        cached = self._category_cache.get(symbol.upper())
+        if cached:
+            return [cached]
+        return ["US_STOCK", "US_ETF"]
+
+    def get_instrument(self, symbol: str, category: str | None = None) -> Optional[dict]:
+        """Look up instrument details for a symbol.
+
+        If `category` is omitted, tries cached category first, then
+        US_STOCK, then US_ETF (caching whichever succeeds).
+        """
+        sym = symbol.upper()
+        categories = [category] if category else self._categories_to_try(sym)
+
+        last_data = None
+        for cat in categories:
+            data = self._market_get("/instrument/list", {
+                "symbols": sym,
+                "category": cat,
+            })
+            last_data = data
+            if isinstance(data, list) and len(data) > 0:
+                self._category_cache[sym] = cat
+                return data[0]
+            if isinstance(data, dict) and not data.get("error"):
+                self._category_cache[sym] = cat
+                return data
+            if not self._is_invalid_symbol_error(data):
+                # Network/auth/etc. — don't keep retrying with new categories.
+                return None
+
         return None
 
-    def get_instrument_id(self, symbol: str, category: str = "US_STOCK") -> Optional[str]:
+    def get_instrument_id(self, symbol: str, category: str | None = None) -> Optional[str]:
         """Get the instrument_id needed for placing orders."""
         instrument = self.get_instrument(symbol, category)
         if instrument:
@@ -283,7 +322,7 @@ class WebullClient:
         symbol: str,
         timespan: str = "D",
         count: int = 200,
-        category: str = "US_STOCK",
+        category: str | None = None,
     ) -> list[dict]:
         """Get historical candlestick/bar data.
 
@@ -291,15 +330,28 @@ class WebullClient:
             symbol: Stock ticker (e.g., AAPL)
             timespan: M1, M5, M15, M30, M60, M120, M240, D, W, M, Y
             count: Number of bars (max 1200)
-            category: US_STOCK or US_ETF
+            category: US_STOCK / US_ETF — when omitted, tries cached then
+                falls back US_STOCK → US_ETF on INVALID_SYMBOL.
         """
-        data = self._market_get("/market-data/bars", {
-            "symbol": symbol.upper(),
-            "category": category,
-            "timespan": timespan,
-            "count": str(min(count, 1200)),
-        })
-        return self._normalize_bars(data, count)
+        sym = symbol.upper()
+        categories = [category] if category else self._categories_to_try(sym)
+
+        for cat in categories:
+            data = self._market_get("/market-data/bars", {
+                "symbol": sym,
+                "category": cat,
+                "timespan": timespan,
+                "count": str(min(count, 1200)),
+            })
+            bars = self._normalize_bars(data, count)
+            if bars:
+                self._category_cache[sym] = cat
+                return bars
+            if not self._is_invalid_symbol_error(data):
+                # Empty result that isn't a category mismatch — don't retry.
+                return []
+
+        return []
 
     def get_snapshot(self, symbol: str, category: str = "US_STOCK") -> Optional[dict]:
         """Get real-time quote snapshot for a symbol."""

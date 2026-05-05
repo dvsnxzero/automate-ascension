@@ -5,6 +5,10 @@ import { getBars, getQuote, addToWatchlist, searchSymbol } from "../services/api
 import { useTheme } from "../hooks/useTheme";
 import DotLogo from "./DotLogo";
 import DotChart from "./DotChart";
+import PageLoader from "./PageLoader";
+
+const DEFAULT_SYMBOL = "SPY";
+const DEFAULT_INTERVAL = "5m";
 
 // Read CSS variable as a hex/rgb string
 function cssVar(name) {
@@ -16,12 +20,22 @@ export default function ChartView() {
   const navigate = useNavigate();
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
-  const [symbol, setSymbol] = useState(urlSymbol?.toUpperCase() || "AAPL");
+  const [symbol, setSymbol] = useState(urlSymbol?.toUpperCase() || DEFAULT_SYMBOL);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [interval, setInterval] = useState("1d");
+  const [interval, setInterval] = useState(DEFAULT_INTERVAL);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  // If the URL symbol changes (e.g. user clicks a position card → /chart/AAPL),
+  // sync the symbol state. Without this the user could land on /chart/AAPL
+  // but still see SPY because the initial useState ran with no param.
+  useEffect(() => {
+    const next = urlSymbol?.toUpperCase() || DEFAULT_SYMBOL;
+    if (next !== symbol) setSymbol(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSymbol]);
   const [chartError, setChartError] = useState(null);
   const [stockInfo, setStockInfo] = useState({ name: "", type: "", exchange: "" });
   const [priceInfo, setPriceInfo] = useState({ price: null, change: null, changePct: null, open: null, high: null, low: null, volume: null });
@@ -31,6 +45,7 @@ export default function ChartView() {
   const [suggestions, setSuggestions] = useState([]);
   const [chartMode, setChartMode] = useState("candle"); // "candle" | "dot"
   const [rawBars, setRawBars] = useState([]);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
   const { isDark } = useTheme();
@@ -76,6 +91,7 @@ export default function ChartView() {
     let chart;
     let resizeObserver;
     let cancelled = false;
+    setChartLoading(true);
 
     const loadChart = async () => {
       try {
@@ -205,7 +221,10 @@ export default function ChartView() {
         }
 
         candleSeries.setData(bars);
-        if (!cancelled) setRawBars(bars);
+        if (!cancelled) {
+          setRawBars(bars);
+          setChartLoading(false);
+        }
         chart.timeScale().fitContent();
 
         // Compute price info from bars
@@ -281,6 +300,7 @@ export default function ChartView() {
       } catch (err) {
         console.error("Chart load error:", err);
         setChartError("Failed to load chart library");
+        setChartLoading(false);
       }
     };
 
@@ -294,8 +314,9 @@ export default function ChartView() {
     };
   }, [symbol, interval, isDark]);
 
-  // Debounced search as user types
-  const handleSearchInput = (value) => {
+  // Debounced search as user types — auto-uppercase tickers/company names
+  const handleSearchInput = (rawValue) => {
+    const value = (rawValue || "").toUpperCase();
     setSearchInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!value.trim()) {
@@ -363,32 +384,32 @@ export default function ChartView() {
   };
 
   return (
-    <div className="flex flex-col h-full pb-28 md:pb-8">
+    <div className="flex flex-col h-full bottom-nav-safe md:pb-8">
       {/* Sticky header — stock info + search + intervals */}
       <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-[1800px] mx-auto">
           {/* Top row: stock identity + search */}
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 min-w-0">
             {/* Stock identity block */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <DotLogo ticker={symbol} size={44} className="shrink-0 hidden sm:block" />
-              <div className="shrink-0">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 sm:flex-initial sm:shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
                   <DotLogo ticker={symbol} size={28} className="shrink-0 sm:hidden" />
-                  <h1 className="text-2xl md:text-3xl font-black tracking-tight">{symbol}</h1>
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight truncate">{symbol}</h1>
                   <button
                     onClick={handleAddToWatchlist}
-                    className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors"
+                    className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors"
                     title="Add to watchlist"
                   >
                     <Star size={12} />
                   </button>
                 </div>
                 {stockInfo.name && (
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-muted truncate max-w-[200px]">{stockInfo.name}</span>
+                  <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                    <span className="text-xs text-muted truncate max-w-[160px] sm:max-w-[200px]">{stockInfo.name}</span>
                     {stockInfo.type && (
-                      <span className="text-[9px] font-semibold text-muted bg-surface px-1.5 py-0.5 rounded border border-border">
+                      <span className="text-[9px] font-semibold text-muted bg-surface px-1.5 py-0.5 rounded border border-border shrink-0">
                         {stockInfo.type}
                       </span>
                     )}
@@ -396,7 +417,7 @@ export default function ChartView() {
                 )}
               </div>
 
-              {/* Price block */}
+              {/* Price block — desktop */}
               {priceInfo.price !== null && (
                 <div className="ml-4 shrink-0 hidden sm:block">
                   <div className="flex items-baseline gap-2">
@@ -424,7 +445,18 @@ export default function ChartView() {
               )}
             </div>
 
-            <form onSubmit={handleSearch} className="ml-auto" ref={searchRef}>
+            {/* Mobile: search icon toggle */}
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen((v) => !v)}
+              className="sm:hidden shrink-0 w-9 h-9 rounded-xl border border-border bg-surface flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors"
+              title="Search"
+            >
+              <Search size={16} />
+            </button>
+
+            {/* Desktop search */}
+            <form onSubmit={handleSearch} className="ml-auto hidden sm:block" ref={searchRef}>
               <div className="relative">
                 <Search
                   size={14}
@@ -435,40 +467,18 @@ export default function ChartView() {
                   value={searchInput}
                   onChange={(e) => handleSearchInput(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-                  placeholder="Search stocks, ETFs..."
-                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-[16px] md:text-sm focus:outline-none focus:border-accent/50 w-44 md:w-64 transition-colors"
+                  placeholder="SEARCH STOCKS, ETFS..."
+                  style={{ textTransform: "uppercase" }}
+                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-[16px] md:text-sm focus:outline-none focus:border-accent/50 w-44 md:w-64 transition-colors uppercase placeholder:normal-case placeholder:tracking-normal"
                 />
 
-                {/* Autocomplete dropdown */}
+                {/* Autocomplete dropdown — desktop */}
                 {searchOpen && (searchResults.length > 0 || searchLoading || noResults) && (
                   <div className="absolute top-full right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto w-72 md:w-80">
                     {searchLoading && searchResults.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-muted">Searching...</div>
+                      <SearchSkeleton />
                     ) : noResults && searchResults.length === 0 ? (
-                      <div className="px-4 py-3">
-                        <div className="text-sm text-muted mb-2">
-                          No matches for "<span className="font-semibold text-theme-text">{searchInput}</span>"
-                        </div>
-                        {suggestions.length > 0 && (
-                          <div>
-                            <div className="text-[10px] text-muted/60 uppercase tracking-wider font-semibold mb-1.5">Did you mean?</div>
-                            {suggestions.map((s, i) => (
-                              <button
-                                key={`sug-${s.symbol}-${i}`}
-                                type="button"
-                                onClick={() => selectResult(s.symbol)}
-                                className="w-full px-2 py-2 flex items-center gap-3 hover:bg-surface-light transition-colors text-left rounded-lg"
-                              >
-                                <DotLogo ticker={s.symbol} size={28} className="shrink-0" />
-                                <div>
-                                  <span className="font-bold text-xs">{s.symbol}</span>
-                                  <span className="text-xs text-muted ml-2">{s.name}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <NoResultsBlock searchInput={searchInput} suggestions={suggestions} selectResult={selectResult} />
                     ) : (
                       searchResults.map((r, i) => (
                         <button
@@ -497,6 +507,54 @@ export default function ChartView() {
               </div>
             </form>
           </div>
+
+          {/* Mobile expanded search */}
+          {mobileSearchOpen && (
+            <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false); }} className="sm:hidden mb-2" ref={searchRef}>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+                  placeholder="SEARCH..."
+                  autoFocus
+                  style={{ textTransform: "uppercase" }}
+                  className="bg-surface border border-border rounded-xl pl-8 pr-3 py-2 text-[16px] focus:outline-none focus:border-accent/50 w-full transition-colors uppercase placeholder:normal-case"
+                />
+                {searchOpen && (searchResults.length > 0 || searchLoading || noResults) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto">
+                    {searchLoading && searchResults.length === 0 ? (
+                      <SearchSkeleton />
+                    ) : noResults && searchResults.length === 0 ? (
+                      <NoResultsBlock searchInput={searchInput} suggestions={suggestions} selectResult={(s) => { selectResult(s); setMobileSearchOpen(false); }} />
+                    ) : (
+                      searchResults.map((r, i) => (
+                        <button
+                          key={`m-${r.symbol}-${i}`}
+                          type="button"
+                          onClick={() => { selectResult(r.symbol); setMobileSearchOpen(false); }}
+                          className="w-full px-3 py-2 flex items-center gap-2.5 hover:bg-surface-light transition-colors text-left"
+                        >
+                          <DotLogo ticker={r.symbol} size={24} className="shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs">{r.symbol}</span>
+                              {r.type && (
+                                <span className="text-[9px] font-medium text-muted bg-surface-light px-1 py-0.5 rounded truncate max-w-[80px]">{r.type}</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-muted truncate">{r.name}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </form>
+          )}
 
           {/* Mobile price display */}
           {priceInfo.price !== null && (
@@ -597,11 +655,15 @@ export default function ChartView() {
               <div className="text-muted text-sm">{chartError}</div>
             </div>
           )}
-          <div
-            ref={chartContainerRef}
-            className="card overflow-hidden mb-4 touch-pan-y"
-            style={{ display: chartMode === "dot" ? "none" : undefined }}
-          />
+          {/* Chart container with branded preloader overlay */}
+          <div className="relative card overflow-hidden mb-4" style={{ display: chartMode === "dot" ? "none" : undefined }}>
+            <div ref={chartContainerRef} className="touch-pan-y" />
+            {chartLoading && !chartError && (
+              <div className="absolute inset-0 bg-theme-bg/80 backdrop-blur-sm flex items-center justify-center z-10">
+                <PageLoader variant="inline" message={`Loading ${symbol} ${interval}`} />
+              </div>
+            )}
+          </div>
 
           {/* Indicator panels — computed from bar data */}
           {rawBars.length >= 14 && (
@@ -612,6 +674,49 @@ export default function ChartView() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Search results skeleton (replaces "Searching..." status text) ── */
+function SearchSkeleton() {
+  return (
+    <div className="p-2">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex items-center gap-2.5 px-2 py-2 animate-pulse">
+          <div className="w-6 h-6 rounded-full bg-surface-light shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-2.5 bg-surface-light rounded w-1/3" />
+            <div className="h-2 bg-surface-light/70 rounded w-2/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NoResultsBlock({ searchInput, suggestions, selectResult }) {
+  return (
+    <div className="px-4 py-3">
+      <div className="text-sm text-muted mb-2">
+        No matches for "<span className="font-semibold text-theme-text">{searchInput}</span>"
+      </div>
+      {suggestions && suggestions.length > 0 && (
+        <div>
+          <div className="text-[10px] text-muted/60 uppercase tracking-wider font-semibold mb-1.5">Did you mean?</div>
+          {suggestions.map((s, i) => (
+            <button
+              key={`sug-${s.symbol}-${i}`}
+              type="button"
+              onClick={() => selectResult(s.symbol)}
+              className="w-full px-2 py-2 flex items-center gap-3 hover:bg-surface-light transition-colors text-left rounded-lg"
+            >
+              <span className="font-bold text-xs">{s.symbol}</span>
+              <span className="text-xs text-muted ml-2 truncate">{s.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

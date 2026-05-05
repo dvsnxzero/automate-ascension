@@ -54,13 +54,44 @@ async def auth_status():
 
 @router.get("/accounts")
 async def list_accounts():
-    """List all Webull accounts linked to this app."""
+    """List all Webull accounts linked to this app.
+
+    Filters out entries with no account_id (Webull occasionally returns
+    placeholder/orphaned subscriptions). For each remaining account we
+    attempt a balance fetch to confirm it's actually live; accounts that
+    error are still returned but flagged with `live: false` so the UI
+    can show a stale-account warning instead of letting the user click
+    a dead account.
+    """
     try:
         from app.webull_client import get_webull
 
         wb = get_webull()
-        accounts = wb.get_account_list()
-        return {"accounts": accounts, "count": len(accounts)}
+        raw = wb.get_account_list()
+
+        cleaned = []
+        for acc in raw:
+            acct_id = acc.get("account_id")
+            if not acct_id:
+                # No id at all — Webull placeholder. Skip silently.
+                continue
+            entry = {
+                "account_id": acct_id,
+                "account_type": acc.get("account_type", "paper"),
+                "live": True,
+            }
+            # Cheap liveness probe — balance call. If it errors out, mark stale.
+            try:
+                balance = wb.get_balance(account_id=acct_id)
+                if isinstance(balance, dict) and balance.get("error"):
+                    entry["live"] = False
+                    entry["status_message"] = str(balance.get("error"))
+            except Exception as probe_err:
+                entry["live"] = False
+                entry["status_message"] = str(probe_err)
+            cleaned.append(entry)
+
+        return {"accounts": cleaned, "count": len(cleaned)}
     except Exception as e:
         logger.error(f"Failed to list accounts: {e}")
         return {"accounts": [], "count": 0, "error": str(e)}

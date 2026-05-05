@@ -45,7 +45,7 @@ export default function ScannerPanel() {
   const activeScanner = SCANNER_TYPES.find((s) => s.id === activeTab);
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-28 md:pb-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto bottom-nav-safe md:pb-8">
       <h1 className="text-3xl font-black tracking-tight mb-6">Scanner</h1>
 
       {/* Scanner type tabs */}

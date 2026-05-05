@@ -29,3 +29,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Vite hot-reload temp files
+frontend/vite.config.js.timestamp-*.mjs

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Routes, Route, NavLink } from "react-router-dom";
+import { Routes, Route, NavLink, Link } from "react-router-dom";
 import {
   LayoutDashboard,
   BarChart3,
@@ -19,8 +19,10 @@ import BacktestLab from "./components/BacktestLab";
 import IntelPage from "./components/IntelPage";
 import SettingsPage from "./components/Settings";
 import Login from "./components/Login";
+import PageLoader from "./components/PageLoader";
 import { ThemeProvider } from "./hooks/useTheme";
-import { useSessionTimeout } from "./hooks/useSessionTimeout";
+import { useSessionTimeout, hasLiveSessionMarker, clearLiveSessionMarker } from "./hooks/useSessionTimeout";
+import { useLenisGlobal } from "./hooks/useLenis";
 import { checkSession, checkSetup, logout } from "./services/passkey";
 
 const navItems = [
@@ -47,13 +49,19 @@ const mobileNavItems = [
 function AuthenticatedApp({ onLogout }) {
   // Session timeout — logs out after inactivity
   useSessionTimeout(onLogout);
+  // Smooth scroll + parallax
+  useLenisGlobal();
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text flex overflow-x-hidden max-w-full">
       {/* Sidebar — desktop */}
       <nav className="hidden md:flex flex-col w-60 bg-theme-bg border-r border-border p-5 gap-1">
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-8 px-2">
+        {/* Logo — links to home */}
+        <Link
+          to="/"
+          aria-label="AutomateAscension — Home"
+          className="flex items-center gap-2 mb-8 px-2 -mx-2 rounded-lg hover:bg-surface transition-colors py-1"
+        >
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
               <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
@@ -62,7 +70,7 @@ function AuthenticatedApp({ onLogout }) {
           <span className="text-lg font-bold tracking-tight">
             Automate<span className="text-accent">Ascension</span>
           </span>
-        </div>
+        </Link>
 
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
@@ -106,15 +114,15 @@ function AuthenticatedApp({ onLogout }) {
         </Routes>
       </main>
 
-      {/* Bottom nav — mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-theme-bg/90 backdrop-blur-xl border-t border-border flex justify-around items-center h-16 px-2 z-50">
+      {/* Bottom nav — mobile (lifted above iOS home indicator) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-theme-bg/90 backdrop-blur-xl border-t border-border flex justify-around items-start px-2 z-50 pt-1 bottom-nav-fixed">
         {mobileNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center w-14 h-12 transition-all duration-200 ${
+              `flex flex-col items-center justify-center flex-1 max-w-[68px] h-12 transition-all duration-200 ${
                 isActive ? "text-accent" : "text-muted"
               }`
             }
@@ -122,13 +130,13 @@ function AuthenticatedApp({ onLogout }) {
             {({ isActive }) => (
               <>
                 {isActive ? (
-                  <div className="bg-accent rounded-xl px-5 py-2">
-                    <Icon size={20} className="text-black" strokeWidth={2.5} />
+                  <div className="bg-accent rounded-xl px-4 py-1.5">
+                    <Icon size={18} className="text-black" strokeWidth={2.5} />
                   </div>
                 ) : (
                   <>
                     <Icon size={20} strokeWidth={1.5} />
-                    <span className="text-[10px] font-medium mt-1">{label}</span>
+                    <span className="text-[10px] font-medium mt-0.5">{label}</span>
                   </>
                 )}
               </>
@@ -147,14 +155,26 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        // Check if already logged in
+        // If this tab has no live session marker, the app was closed/relaunched.
+        // Force re-auth even if the server cookie is still valid.
+        const isFreshLaunch = !hasLiveSessionMarker();
+
+        if (isFreshLaunch) {
+          // Sign the server cookie out so a stale cookie can't be reused.
+          try { await logout(); } catch {}
+          const setup = await checkSetup();
+          setIsSetup(setup.is_setup);
+          setAuthState("login");
+          return;
+        }
+
+        // Returning to an existing tab — verify session is still valid
         const session = await checkSession();
         if (session.authenticated) {
           setAuthState("authenticated");
           return;
         }
 
-        // Check if passkeys are set up
         const setup = await checkSetup();
         setIsSetup(setup.is_setup);
         setAuthState("login");
@@ -165,6 +185,7 @@ export default function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    clearLiveSessionMarker();
     try {
       await logout();
     } catch {}
@@ -174,22 +195,8 @@ export default function App() {
   if (authState === "loading") {
     return (
       <ThemeProvider>
-        <div className="min-h-screen bg-theme-bg flex flex-col items-center justify-center gap-6">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 26 26" fill="none">
-                <path d="M15 3L6 15H13L11 23L20 11H13L15 3Z" fill="#000"/>
-              </svg>
-            </div>
-            {/* Pulse ring */}
-            <div className="absolute inset-0 rounded-2xl bg-accent/20 animate-ping" />
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold tracking-tight">
-              Automate<span className="text-accent">Ascension</span>
-            </div>
-            <div className="text-xs text-muted mt-1 animate-pulse">Loading dashboard...</div>
-          </div>
+        <div className="bg-theme-bg">
+          <PageLoader variant="fullscreen" message="Booting" />
         </div>
       </ThemeProvider>
     );

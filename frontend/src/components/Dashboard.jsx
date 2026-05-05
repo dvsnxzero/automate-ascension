@@ -13,7 +13,9 @@ import {
   Wallet,
   PieChart,
 } from "lucide-react";
-import { getAccount, getPositions, getWatchlist, healthCheck, listAccounts } from "../services/api";
+import { getAccount, getPositions, getWatchlist, healthCheck, listAccounts, setActiveAccount, getActiveAccountId } from "../services/api";
+import PageLoader from "./PageLoader";
+import { useScrollOffset } from "../hooks/useLenis";
 import DotLogo from "./DotLogo";
 import DotSparkline from "./DotSparkline";
 import DotWaffle from "./DotWaffle";
@@ -30,12 +32,18 @@ export default function Dashboard() {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [accounts, setAccounts] = useState([]);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [activeAccountId, setActiveAccountIdState] = useState(() => getActiveAccountId());
+  const [accountLoading, setAccountLoading] = useState(true);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+  // Subtle parallax for the portfolio hero (mobile-friendly: small offset)
+  const [parallaxY, setParallaxY] = useState(0);
+  useScrollOffset((y) => setParallaxY(Math.min(y * 0.06, 14)));
   const cardScrollRef = useRef(null);
 
   const fetchAll = async () => {
     await Promise.allSettled([
       healthCheck().then(() => setApiConnected(true)).catch(() => setApiConnected(false)),
-      getAccount().then((r) => setAccount(r.data)),
+      getAccount().then((r) => { setAccount(r.data); setAccountLoading(false); }).catch(() => setAccountLoading(false)),
       getPositions().then((r) => {
         setPositions(r.data.positions || []);
         if (r.data.source) setDataSource(r.data.source);
@@ -43,21 +51,35 @@ export default function Dashboard() {
       getWatchlist().then((r) => setWatchlist(r.data.items || [])),
       listAccounts().then((r) => setAccounts(r.data.accounts || [])).catch(() => {}),
     ]);
+    setSwitchingAccount(false);
   };
 
   const { pullRef, pulling, pullDistance, refreshing } = usePullToRefresh(fetchAll);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); }, [activeAccountId]);
 
-  const demoPositions = [
-    { symbol: "AAPL", name: "Apple", price: 273.25, change: 8.73 },
-    { symbol: "GOOG", name: "Google", price: 491.24, change: 0.94 },
-    { symbol: "AMZN", name: "Amazon", price: 216.21, change: 2.21 },
-    { symbol: "TSLA", name: "Tesla", price: 367.67, change: 4.62 },
-  ];
+  const handleSelectAccount = (acc) => {
+    if (!acc?.account_id) return;
+    if (acc.account_id === activeAccountId) {
+      setShowAccountPicker(false);
+      return;
+    }
+    // Persist + update state. Even if `live: false`, we still try — Webull's
+    // liveness probe occasionally fails for valid accounts (rate limit / paper
+    // accounts), and silently dropping the click is worse than letting the
+    // user attempt the switch and see a real error.
+    setActiveAccount(acc.account_id);
+    setActiveAccountIdState(acc.account_id);
+    setShowAccountPicker(false);
+    setSwitchingAccount(true);
+    setAccountLoading(true);
+    setAccount(null);
+    setPositions([]);
+  };
 
-  const displayPositions = positions.length > 0 ? positions : demoPositions;
-  const portfolioValue = account?.total_value ?? 12345.67;
+  // No demo placeholders — show real positions or an empty state
+  const displayPositions = positions;
+  const portfolioValue = account?.total_value ?? null;
   const tabs = ["Portfolio", "Watchlist", "Movers", "Scanner"];
 
   // Scroll to card by index
@@ -81,7 +103,7 @@ export default function Dashboard() {
 
   // ========== MOBILE LAYOUT ==========
   const MobileLayout = () => (
-    <div className="md:hidden flex flex-col min-h-screen pb-24">
+    <div className="md:hidden flex flex-col min-h-screen bottom-nav-safe">
       {/* Top bar with account switcher */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
@@ -97,39 +119,52 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Account picker dropdown */}
-      {showAccountPicker && (
-        <div className="mx-4 mb-3 rounded-xl bg-surface border border-border overflow-hidden">
-          {accounts.length > 0 ? accounts.map((acc, i) => (
-            <div
-              key={acc.account_id || i}
-              className={`flex items-center justify-between px-4 py-3 ${
-                acc.account_id === account?.account_id ? "bg-accent/10 border-l-2 border-accent" : ""
-              } ${i > 0 ? "border-t border-border" : ""}`}
-            >
-              <div>
-                <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
-                <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
-              </div>
-              {acc.account_id === account?.account_id && (
-                <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
-              )}
-            </div>
-          )) : (
+      {/* Account picker dropdown — animated open/close (no layout jolt) */}
+      <div
+        className={`mx-4 overflow-hidden transition-all duration-300 ease-out ${
+          showAccountPicker ? "max-h-[480px] mb-3 opacity-100" : "max-h-0 mb-0 opacity-0"
+        }`}
+        aria-hidden={!showAccountPicker}
+      >
+        <div className="rounded-xl bg-surface border border-border overflow-hidden">
+          {accounts.length > 0 ? accounts.map((acc, i) => {
+            const isActive = acc.account_id === (activeAccountId || account?.account_id);
+            const isStale = acc.live === false;
+            return (
+              <button
+                key={acc.account_id || i}
+                type="button"
+                onClick={() => handleSelectAccount(acc)}
+                className={`w-full text-left flex items-center justify-between px-4 py-3 active:bg-surface-light transition-colors ${
+                  isActive ? "bg-accent/10 border-l-2 border-accent" : ""
+                } ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
+                  <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
+                </div>
+                {isActive ? (
+                  <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
+                ) : isStale ? (
+                  <span className="text-[9px] font-bold text-muted bg-surface-light px-2 py-0.5 rounded">STALE</span>
+                ) : null}
+              </button>
+            );
+          }) : (
             <div className="px-4 py-3 text-xs text-muted">
               {account?.connected ? "1 account connected" : "No accounts connected"}
             </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Tab chips — scrollable */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+      {/* Tab chips — scrollable (touch-pan-x to release horizontal swipe from PTR) */}
+      <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: "touch" }}>
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); setActiveCardIndex(0); }}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
               activeTab === tab
                 ? "bg-accent text-black"
                 : "bg-surface border border-border text-muted"
@@ -160,15 +195,29 @@ export default function Dashboard() {
       )}
 
       {/* Hero area — depends on active tab */}
+      {switchingAccount && (
+        <div className="mx-4 mb-3 px-3 py-2 rounded-xl bg-accent/10 border border-accent/20 flex items-center gap-2 animate-pulse">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="text-accent text-[11px] font-medium">Switching accounts…</span>
+        </div>
+      )}
+
       {activeTab === "Portfolio" && (
         <>
-          {/* Portfolio value */}
-          <div className="px-4 pt-2 pb-4">
+          {/* Portfolio value — subtle parallax (mobile-friendly) */}
+          <div
+            className="px-4 pt-2 pb-4 will-change-transform"
+            style={{ transform: `translate3d(0, ${-parallaxY}px, 0)` }}
+          >
             <p className="text-muted text-xs font-medium mb-1">Total Value</p>
             <h1 className="text-4xl font-black tracking-tight font-tabular">
-              ${typeof portfolioValue === "number"
-                ? portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2 })
-                : portfolioValue}
+              {accountLoading ? (
+                <span className="inline-block w-48 h-9 rounded-lg bg-surface-light animate-pulse align-middle" />
+              ) : typeof portfolioValue === "number" ? (
+                `$${portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+              ) : (
+                <span className="text-muted text-2xl">—</span>
+              )}
             </h1>
             <div className="flex gap-2 mt-3">
               {["1W", "1M", "6M", "1Y"].map((range) => (
@@ -188,46 +237,60 @@ export default function Dashboard() {
           </div>
 
           {/* Stats row — horizontal scroll */}
-          <div className="flex gap-3 px-4 pb-4 overflow-x-auto no-scrollbar">
+          <div className="flex gap-3 px-4 pb-4 overflow-x-auto no-scrollbar touch-pan-x">
             <MiniStat label="Buying Power" value={account?.buying_power} icon={DollarSign} />
             <MiniStat label="Market Value" value={account?.market_value} icon={PieChart} />
             <MiniStat label="Cash" value={account?.cash_balance} icon={Wallet} />
             <MiniStat label="Day P&L" value={account?.day_pnl ?? "+$0.00"} icon={TrendingUp} positive={account?.day_pnl >= 0} />
           </div>
 
-          {/* Portfolio waffle — mobile */}
-          <div className="px-4 mb-4">
-            <DotWaffle
-              holdings={displayPositions.map((p, i) => ({
-                symbol: p.symbol,
-                pct: p.holding_pct || (100 / displayPositions.length),
-                color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A"][i % 4],
-              }))}
-              totalValue={portfolioValue}
-              dotRadius={6}
-            />
-          </div>
+          {/* Portfolio waffle — mobile (only render with real data) */}
+          {displayPositions.length > 0 && (
+            <div className="px-4 mb-4">
+              <DotWaffle
+                holdings={displayPositions.map((p, i) => ({
+                  symbol: p.symbol,
+                  pct: p.holding_pct || (100 / displayPositions.length),
+                  color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A"][i % 4],
+                }))}
+                totalValue={portfolioValue}
+                dotRadius={6}
+              />
+            </div>
+          )}
 
           {/* Swipeable position cards */}
           <div className="px-4 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-muted uppercase tracking-wider">Positions</h2>
-            <div className="flex gap-1">
-              {displayPositions.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => scrollToCard(i)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    i === activeCardIndex ? "bg-accent w-5" : "bg-surface-light"
-                  }`}
-                />
-              ))}
-            </div>
+            {displayPositions.length > 0 && (
+              <div className="flex gap-1">
+                {displayPositions.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => scrollToCard(i)}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      i === activeCardIndex ? "bg-accent w-5" : "bg-surface-light"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
+
+          {displayPositions.length === 0 && !accountLoading && (
+            <div className="mx-4 mb-4 rounded-2xl bg-surface border border-border p-6 text-center">
+              <div className="text-muted text-sm mb-1">No positions</div>
+              <div className="text-muted/60 text-xs">
+                {account?.connected ? "Open a paper trade to get started" : "Connect Webull in Settings"}
+              </div>
+            </div>
+          )}
 
           <div
             ref={cardScrollRef}
             onScroll={handleCardScroll}
-            className="flex gap-4 px-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-4"
+            className="flex gap-4 px-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-4 touch-pan-x"
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
             {displayPositions.map((pos) => {
               const pnl = pos.unrealized_pnl ?? 0;
@@ -414,9 +477,13 @@ export default function Dashboard() {
             </button>
           </div>
           <h1 className="text-5xl font-black tracking-tight font-tabular">
-            ${typeof portfolioValue === "number"
-              ? portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2 })
-              : portfolioValue}
+            {accountLoading ? (
+              <span className="inline-block w-72 h-12 rounded-lg bg-surface-light animate-pulse align-middle" />
+            ) : typeof portfolioValue === "number" ? (
+              `$${portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+            ) : (
+              <span className="text-muted text-3xl">—</span>
+            )}
           </h1>
         </div>
         <button className="w-10 h-10 rounded-xl border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-colors">
@@ -424,31 +491,44 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Desktop account picker */}
-      {showAccountPicker && (
-        <div className="mb-6 w-64 rounded-xl bg-surface border border-border overflow-hidden">
-          {accounts.length > 0 ? accounts.map((acc, i) => (
-            <div
-              key={acc.account_id || i}
-              className={`flex items-center justify-between px-4 py-3 ${
-                acc.account_id === account?.account_id ? "bg-accent/10 border-l-2 border-accent" : ""
-              } ${i > 0 ? "border-t border-border" : ""}`}
-            >
-              <div>
-                <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
-                <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
-              </div>
-              {acc.account_id === account?.account_id && (
-                <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
-              )}
-            </div>
-          )) : (
+      {/* Desktop account picker — animated */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          showAccountPicker ? "max-h-[480px] mb-6 opacity-100" : "max-h-0 mb-0 opacity-0"
+        }`}
+        aria-hidden={!showAccountPicker}
+      >
+        <div className="w-64 rounded-xl bg-surface border border-border overflow-hidden">
+          {accounts.length > 0 ? accounts.map((acc, i) => {
+            const isActive = acc.account_id === (activeAccountId || account?.account_id);
+            const isStale = acc.live === false;
+            return (
+              <button
+                key={acc.account_id || i}
+                type="button"
+                onClick={() => handleSelectAccount(acc)}
+                className={`w-full text-left flex items-center justify-between px-4 py-3 hover:bg-surface-light transition-colors ${
+                  isActive ? "bg-accent/10 border-l-2 border-accent" : ""
+                } ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">{acc.account_type || "Paper"}</div>
+                  <div className="text-[10px] text-muted font-mono">···{(acc.account_id || "").slice(-6)}</div>
+                </div>
+                {isActive ? (
+                  <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">ACTIVE</span>
+                ) : isStale ? (
+                  <span className="text-[9px] font-bold text-muted bg-surface-light px-2 py-0.5 rounded">STALE</span>
+                ) : null}
+              </button>
+            );
+          }) : (
             <div className="px-4 py-3 text-xs text-muted">
               {account?.connected ? "1 account connected" : "No accounts connected"}
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Connection status */}
       {!apiConnected && (
@@ -500,17 +580,19 @@ export default function Dashboard() {
         <StatCard label="Positions" value={positions.length || "—"} icon={BarChart3} isAccent />
       </div>
 
-      {/* Portfolio allocation waffle */}
-      <div className="mb-8">
-        <DotWaffle
-          holdings={displayPositions.map((p, i) => ({
-            symbol: p.symbol,
-            pct: p.holding_pct || (100 / displayPositions.length),
-            color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A", "#FF9100", "#00BFA5", "#7B61FF", "#46BDC6"][i % 8],
-          }))}
-          totalValue={portfolioValue}
-        />
-      </div>
+      {/* Portfolio allocation waffle — only with real positions */}
+      {displayPositions.length > 0 && (
+        <div className="mb-8">
+          <DotWaffle
+            holdings={displayPositions.map((p, i) => ({
+              symbol: p.symbol,
+              pct: p.holding_pct || (100 / displayPositions.length),
+              color: ["#CEDC21", "#34A853", "#536DFE", "#E91E8A", "#FF9100", "#00BFA5", "#7B61FF", "#46BDC6"][i % 8],
+            }))}
+            totalValue={portfolioValue}
+          />
+        </div>
+      )}
 
       {/* Portfolio positions */}
       <section className="mb-8">
@@ -520,6 +602,14 @@ export default function Dashboard() {
             View all <ArrowUpRight size={14} />
           </Link>
         </div>
+        {displayPositions.length === 0 && !accountLoading && (
+          <div className="card p-8 text-center">
+            <div className="text-muted text-sm mb-1">No positions</div>
+            <div className="text-muted/60 text-xs">
+              {account?.connected ? "Open a paper trade to get started" : "Connect Webull in Settings"}
+            </div>
+          </div>
+        )}
         <div className="space-y-3">
           {displayPositions.map((pos) => {
             const changePct = pos.change_pct ?? pos.change ?? 0;
@@ -603,6 +693,13 @@ export default function Dashboard() {
       </section>
     </div>
   );
+
+  // Branded preloader on initial dashboard load — shown until the
+  // first /trade/account response settles (whether real, demo, or error).
+  const isInitialLoading = accountLoading && account === null && !switchingAccount && positions.length === 0;
+  if (isInitialLoading) {
+    return <PageLoader variant="page" message="Loading portfolio" />;
+  }
 
   return (
     <div ref={pullRef}>

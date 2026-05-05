@@ -54,8 +54,12 @@ def _get_client():
 # ─── Account ──────────────────────────────────────────────────
 
 @router.get("/account")
-async def get_account():
-    """Get account balance, buying power, and P&L."""
+async def get_account(account_id: Optional[str] = None):
+    """Get account balance, buying power, and P&L.
+
+    Pass `account_id` to query a specific account; otherwise the first
+    account discovered via /app/subscriptions/list is used.
+    """
     wb = _get_client()
     if not wb:
         return {
@@ -67,7 +71,7 @@ async def get_account():
         }
 
     try:
-        balance = wb.get_balance()
+        balance = wb.get_balance(account_id=account_id) if account_id else wb.get_balance()
         if "error" in balance:
             return {
                 "buying_power": None,
@@ -93,7 +97,7 @@ async def get_account():
             "cash_balance": cash_balance or float(balance.get("total_cash_balance", 0) or 0),
             "day_pnl": None,  # Not directly in balance endpoint
             "account_type": "paper",
-            "account_id": balance.get("account_id"),
+            "account_id": account_id or balance.get("account_id"),
             "connected": True,
         }
     except Exception as e:
@@ -108,14 +112,14 @@ async def get_account():
 
 
 @router.get("/positions")
-async def get_positions():
-    """Get current open positions."""
+async def get_positions(account_id: Optional[str] = None):
+    """Get current open positions for the active (or specified) account."""
     wb = _get_client()
     if not wb:
         return {"positions": [], "source": "demo", "message": "Webull API not connected"}
 
     try:
-        holdings = wb.get_positions()
+        holdings = wb.get_positions(account_id=account_id) if account_id else wb.get_positions()
         positions = []
         for h in holdings:
             positions.append({

@@ -213,6 +213,23 @@ body::before {
   scrollbar-width: none;
 }
 
+/* Safe-area insets — iOS PWA / save-to-home-screen support */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.bottom-nav-safe {
+  /* Bottom nav height (4rem = 64px) + iOS home indicator inset */
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 8px);
+}
+.bottom-nav-fixed {
+  /* Lift fixed nav above iOS home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Theme transition for smooth switching */
 *, *::before, *::after {
   transition-property: background-color, border-color, color;

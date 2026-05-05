@@ -208,7 +208,7 @@ export default function CourseNotes() {
   };
 
   return (
-    <div className="flex flex-col h-full pb-28 md:pb-8">
+    <div className="flex flex-col h-full bottom-nav-safe md:pb-8">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-theme-bg/95 backdrop-blur-sm border-b border-border/50 px-4 md:px-8 py-3">
         <div className="max-w-7xl mx-auto">

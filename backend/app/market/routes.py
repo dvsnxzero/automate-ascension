@@ -8,6 +8,7 @@ Uses the Webull OpenAPI for:
 Falls back to Yahoo Finance chart API when Webull is not connected.
 """
 
+from datetime import date, datetime, timezone
 from fastapi import APIRouter
 import logging
 import httpx
@@ -448,3 +449,152 @@ async def _get_suggestions(query: str, limit: int = 5) -> list:
 
     scored.sort(key=lambda x: -x["score"])
     return [{"symbol": s["symbol"], "name": s["name"]} for s in scored[:limit]]
+
+
+# ─── Backtest-facing helpers ───
+# Backtests need an explicit date window and an attribution of which provider
+# served the bars. This extends the existing Webull→Yahoo fallback so the
+# fetch logic stays in one place.
+
+# Approximate trading bars per calendar day, used to size Webull `count` calls.
+_BARS_PER_DAY = {
+    "1m": 390,   # 6.5h * 60
+    "5m": 78,
+    "15m": 26,
+    "30m": 13,
+    "1h": 7,
+    "4h": 2,
+    "1d": 1,
+    "1w": 1 / 5,
+}
+
+
+async def fetch_bars_range(
+    symbol: str,
+    interval: str,
+    start_date: date,
+    end_date: date,
+) -> tuple[list[dict], str | None]:
+    """Return (bars, source) for [start_date, end_date], inclusive.
+
+    Tries Webull first (sized by calendar window), falls back to Yahoo using
+    explicit period1/period2. `source` is "webull", "yahoo", or None if both
+    paths produced nothing.
+    """
+    symbol = symbol.upper()
+    span_days = max((end_date - start_date).days, 1)
+    per_day = _BARS_PER_DAY.get(interval, 1)
+    # Pad generously for weekends / holidays / partial days.
+    target_count = min(int(span_days * per_day * 1.6) + 50, 1200)
+
+    start_ts = int(datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc).timestamp())
+    end_ts = int(datetime.combine(end_date, datetime.max.time(), tzinfo=timezone.utc).timestamp())
+
+    # --- Webull ---
+    wb = _get_client()
+    if wb:
+        timespan = INTERVAL_MAP.get(interval, "D")
+        t0 = time.time()
+        try:
+            raw = wb.get_bars(symbol, timespan=timespan, count=target_count)
+            ms = int((time.time() - t0) * 1000)
+            filtered = _filter_bars_by_range(raw or [], start_ts, end_ts)
+            if filtered:
+                _log_access("webull", "bars", symbol, "ok", ms, len(filtered),
+                            meta={"interval": interval, "range": f"{start_date}..{end_date}"})
+                return filtered, "webull"
+            _log_access("webull", "bars", symbol, "empty", ms, 0,
+                        meta={"interval": interval, "range": f"{start_date}..{end_date}"})
+        except Exception as e:
+            ms = int((time.time() - t0) * 1000)
+            _log_access("webull", "bars", symbol, "error", ms, error_message=str(e))
+            logger.warning(f"Webull range fetch failed for {symbol}: {e}")
+
+    # --- Yahoo ---
+    t0 = time.time()
+    try:
+        bars = await _yahoo_bars_range(symbol, interval, start_ts, end_ts)
+        ms = int((time.time() - t0) * 1000)
+        if bars:
+            _log_access("yahoo", "bars", symbol, "ok", ms, len(bars),
+                        meta={"interval": interval, "range": f"{start_date}..{end_date}"})
+            return bars, "yahoo"
+        _log_access("yahoo", "bars", symbol, "empty", ms, 0,
+                    meta={"interval": interval, "range": f"{start_date}..{end_date}"})
+    except Exception as e:
+        ms = int((time.time() - t0) * 1000)
+        _log_access("yahoo", "bars", symbol, "error", ms, error_message=str(e))
+        logger.warning(f"Yahoo range fetch failed for {symbol}: {e}")
+
+    return [], None
+
+
+def _filter_bars_by_range(bars: list[dict], start_ts: int, end_ts: int) -> list[dict]:
+    """Keep only bars whose `time` falls inside [start_ts, end_ts].
+
+    Webull returns bar `time` as either a unix int or a date string ("YYYY-MM-DD")
+    depending on timespan. Normalize both to unix seconds for filtering.
+    """
+    out: list[dict] = []
+    for b in bars:
+        t = b.get("time")
+        if t is None:
+            continue
+        if isinstance(t, str):
+            try:
+                ts = int(datetime.strptime(t[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
+            except ValueError:
+                continue
+        else:
+            ts = int(t)
+        if start_ts <= ts <= end_ts:
+            normalized = dict(b)
+            normalized["time"] = ts
+            out.append(normalized)
+    return out
+
+
+async def _yahoo_bars_range(symbol: str, interval: str, start_ts: int, end_ts: int) -> list[dict]:
+    """Fetch bars from Yahoo with explicit period1 / period2 (unix seconds)."""
+    yf_interval = _YAHOO_INTERVAL.get(interval, "1d")
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {
+        "interval": yf_interval,
+        "period1": start_ts,
+        "period2": end_ts,
+        "includePrePost": "false",
+    }
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, params=params, headers=headers, timeout=10.0)
+        data = resp.json()
+
+    result_data = data.get("chart", {}).get("result")
+    if not result_data:
+        return []
+
+    chart = result_data[0]
+    timestamps = chart.get("timestamp", [])
+    quote = chart.get("indicators", {}).get("quote", [{}])[0]
+    opens = quote.get("open", [])
+    highs = quote.get("high", [])
+    lows = quote.get("low", [])
+    closes = quote.get("close", [])
+    volumes = quote.get("volume", [])
+
+    bars = []
+    for i, ts in enumerate(timestamps):
+        if i >= len(opens) or opens[i] is None or closes[i] is None:
+            continue
+        bar = {
+            "time": int(ts),
+            "open": round(opens[i], 4),
+            "high": round(highs[i], 4),
+            "low": round(lows[i], 4),
+            "close": round(closes[i], 4),
+        }
+        if i < len(volumes) and volumes[i] is not None:
+            bar["volume"] = int(volumes[i])
+        bars.append(bar)
+    return bars

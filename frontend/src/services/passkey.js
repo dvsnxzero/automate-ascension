@@ -23,7 +23,19 @@ export async function logout() {
 
 // ─── Registration (first-time setup) ───
 
+function _ensureSecureContext() {
+  // WebAuthn requires a secure context. Localhost is OK; LAN IP over HTTP is not.
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    const host = window.location?.hostname || "this address";
+    throw new Error(
+      `Passkeys need HTTPS. ${host} is loaded over HTTP. Open via https:// or http://localhost.`
+    );
+  }
+}
+
 export async function startRegistration() {
+  _ensureSecureContext();
+
   // 1. Get challenge from server
   const res = await api.post("/auth/passkey/register/begin");
   const { options: optionsJSON, challenge_key } = res.data;
@@ -39,8 +51,28 @@ export async function startRegistration() {
     }));
   }
 
-  // 3. Create credential via browser
-  const credential = await navigator.credentials.create({ publicKey: options });
+  // 3. Create credential via browser — translate WebAuthn errors to actionable messages
+  let credential;
+  try {
+    credential = await navigator.credentials.create({ publicKey: options });
+  } catch (err) {
+    if (err.name === "InvalidStateError") {
+      // The authenticator already has a credential for this RP+user.
+      // Throw a sentinel that Login.jsx already routes to "switch to login".
+      const e = new Error("This device already has a passkey for this app. Try signing in instead.");
+      e.name = "InvalidStateError";
+      throw e;
+    }
+    if (err.name === "NotAllowedError") {
+      throw new Error(
+        "Passkey registration was cancelled or blocked. If this keeps happening, make sure the page is loaded over HTTPS and that biometrics are enabled in your device settings."
+      );
+    }
+    if (err.name === "SecurityError") {
+      throw new Error("Passkey blocked for security reasons. Use HTTPS or http://localhost — not a LAN IP.");
+    }
+    throw err;
+  }
 
   // 4. Serialize for the server (include transports for cross-device hints)
   const credentialJSON = JSON.stringify({
@@ -70,6 +102,8 @@ export async function startRegistration() {
 // ─── Authentication ───
 
 export async function startAuthentication() {
+  _ensureSecureContext();
+
   // 1. Get challenge
   const res = await api.post("/auth/passkey/auth/begin");
   const { options: optionsJSON, challenge_key } = res.data;
@@ -89,12 +123,18 @@ export async function startAuthentication() {
   try {
     credential = await navigator.credentials.get({ publicKey: options });
   } catch (err) {
-    // User cancelled, no matching credential, or timeout
     if (err.name === "NotAllowedError") {
-      throw new Error("Authentication was cancelled or timed out. Try again, or use a backup code.");
+      throw new Error(
+        "Sign-in was cancelled or denied. Make sure you respond to the Face ID / Touch ID prompt within a few seconds, or use a backup code."
+      );
     }
     if (err.name === "InvalidStateError") {
-      throw new Error("No matching passkey found on this device. Use a backup code to sign in, then register this device.");
+      throw new Error(
+        "No matching passkey on this device. Use a backup code to sign in, then add this device under Settings → Security."
+      );
+    }
+    if (err.name === "SecurityError") {
+      throw new Error("Sign-in blocked for security reasons. Use HTTPS or http://localhost — not a LAN IP.");
     }
     throw err;
   }

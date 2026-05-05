@@ -1,5 +1,25 @@
 import axios from "axios";
 
+// ─── Active account selection ───
+// The frontend stores the user's chosen account_id locally and sends it
+// on every request so multi-account users can switch contexts.
+const ACTIVE_ACCOUNT_KEY = "aa-active-account-id";
+
+export function getActiveAccountId() {
+  try {
+    return localStorage.getItem(ACTIVE_ACCOUNT_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveAccount(accountId) {
+  try {
+    if (accountId) localStorage.setItem(ACTIVE_ACCOUNT_KEY, accountId);
+    else localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+  } catch {}
+}
+
 // In dev, Vite proxies /api to localhost:8000
 // In prod, same origin (FastAPI serves the frontend)
 const api = axios.create({
@@ -7,6 +27,15 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
   timeout: 30000, // 30s timeout for scanner operations
   withCredentials: true, // Send cookies for auth
+});
+
+// Attach active account_id to every request as a query param
+api.interceptors.request.use((config) => {
+  const acct = getActiveAccountId();
+  if (acct) {
+    config.params = { ...(config.params || {}), account_id: acct };
+  }
+  return config;
 });
 
 // --- Auth ---
@@ -65,6 +94,15 @@ export const getIntelDashboard = (params = {}) => api.get("/intel/dashboard", { 
 export const getMarketEvents = (params = {}) => api.get("/intel/events", { params });
 export const createMarketEvent = (event) => api.post("/intel/events", event);
 export const takeSentimentSnapshot = (bucket = "hourly") => api.post("/intel/snapshot", null, { params: { bucket } });
+
+// --- Backtest Lab ---
+export const getStrategies = () => api.get("/backtest/strategies");
+export const runBacktest = (payload) => api.post("/backtest/run", payload);
+export const listRuns = (params = {}) => api.get("/backtest/runs", { params });
+export const getRun = (id) => api.get(`/backtest/runs/${id}`);
+export const updateRun = (id, patch) => api.patch(`/backtest/runs/${id}`, patch);
+export const deleteRun = (id) => api.delete(`/backtest/runs/${id}`);
+export const rerunBacktest = (id) => api.post(`/backtest/runs/${id}/rerun`);
 
 // --- Course Notes ---
 export const getModules = () => api.get("/notes/modules");
