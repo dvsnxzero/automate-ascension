@@ -239,7 +239,7 @@ export default function BacktestLab() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-[1500px] mx-auto bottom-nav-safe md:pb-8">
+    <div className="px-4 md:px-8 pb-4 md:py-8 pt-safe-top md:pt-8 max-w-[1500px] mx-auto bottom-nav-safe md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">

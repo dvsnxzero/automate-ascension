@@ -103,9 +103,10 @@ export default function Dashboard() {
 
   // ========== MOBILE LAYOUT ==========
   const MobileLayout = () => (
-    <div className="md:hidden flex flex-col min-h-screen bottom-nav-safe">
-      {/* Top bar with account switcher */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+    <div className="md:hidden flex flex-col bottom-nav-safe">
+      {/* Top bar with account switcher — pt-safe-top so iOS status bar
+          (time / signal / battery) doesn't overlap content */}
+      <div className="flex items-center justify-between px-4 pt-safe-top pb-2">
         <button
           onClick={() => setShowAccountPicker(!showAccountPicker)}
           className="flex items-center gap-1.5 text-xs text-muted font-medium font-mono tracking-wider uppercase active:text-accent transition-colors"

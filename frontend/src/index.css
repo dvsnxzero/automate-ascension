@@ -253,6 +253,11 @@ select:not([multiple]) {
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
+/* Top safe-area + 16px breathing room — use on the topmost element
+   of any mobile page so content doesn't hide behind the iOS status bar. */
+.pt-safe-top {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
 .bottom-nav-safe {
   /* Page content reserves enough space to clear the fixed nav.
      Just nav-height + safe-area; no extra buffer (nav has its own). */

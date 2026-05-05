@@ -584,7 +584,7 @@ export default function Journal() {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto bottom-nav-safe md:pb-8">
+    <div className="px-4 md:px-8 pb-4 md:py-8 pt-safe-top md:pt-8 max-w-7xl mx-auto bottom-nav-safe md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <h1 className="text-3xl font-black tracking-tight">Trade Journal</h1>
