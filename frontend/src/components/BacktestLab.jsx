@@ -369,19 +369,19 @@ export default function BacktestLab() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 w-full">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="flex-1 bg-surface border border-border rounded-lg px-2 py-2 text-xs font-mono"
+                  className="flex-1 min-w-0 bg-surface border border-border rounded-lg px-2 py-2 text-xs font-mono"
                 />
-                <span className="text-muted text-xs">→</span>
+                <span className="shrink-0 text-muted text-xs">→</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="flex-1 bg-surface border border-border rounded-lg px-2 py-2 text-xs font-mono"
+                  className="flex-1 min-w-0 bg-surface border border-border rounded-lg px-2 py-2 text-xs font-mono"
                 />
               </div>
             </div>
