@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getAuthStatus, reconnect } from "../services/api";
 import { logout, startRegistration, checkSetup } from "../services/passkey";
 import { useTheme } from "../hooks/useTheme";
-import { getTimeoutMinutes, setTimeoutMinutes } from "../hooks/useSessionTimeout";
+import { getTimeoutMinutes, setTimeoutMinutes, getBlurTimeoutSeconds, setBlurTimeoutSeconds } from "../hooks/useSessionTimeout";
 import {
   RefreshCw,
   LogOut,
@@ -56,25 +56,39 @@ function ThemeSection() {
 /* ─── Session Timeout ────────────────────── */
 function TimeoutSection() {
   const [minutes, setMinutes] = useState(() => getTimeoutMinutes());
+  const [blurSecs, setBlurSecs] = useState(() => getBlurTimeoutSeconds());
 
-  const presets = [15, 30, 60, 120];
+  const idlePresets = [15, 30, 60, 120];
+  // 0 = disabled, then 30s / 1m / 5m / 15m
+  const blurPresets = [
+    { secs: 0, label: "Off" },
+    { secs: 30, label: "30s" },
+    { secs: 60, label: "1m" },
+    { secs: 300, label: "5m" },
+    { secs: 900, label: "15m" },
+  ];
 
-  const handleChange = (mins) => {
+  const handleIdleChange = (mins) => {
     setMinutes(mins);
     setTimeoutMinutes(mins);
+  };
+
+  const handleBlurChange = (secs) => {
+    setBlurSecs(secs);
+    setBlurTimeoutSeconds(secs);
   };
 
   return (
     <section className="card p-6 mb-4">
       <h2 className="text-base font-bold mb-1">Session Timeout</h2>
-      <p className="text-xs text-muted mb-4">
+      <p className="text-xs text-muted mb-2">
         Auto-logout after {minutes} minutes of inactivity
       </p>
-      <div className="flex gap-2 flex-wrap">
-        {presets.map((mins) => (
+      <div className="flex gap-2 flex-wrap mb-5">
+        {idlePresets.map((mins) => (
           <button
             key={mins}
-            onClick={() => handleChange(mins)}
+            onClick={() => handleIdleChange(mins)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
               minutes === mins
                 ? "bg-accent-bg text-accent border border-accent/30"
@@ -83,6 +97,30 @@ function TimeoutSection() {
           >
             <Timer size={14} />
             {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-muted mb-2">
+        {blurSecs === 0
+          ? "Re-auth on tab-blur is OFF — only the inactivity timer runs"
+          : `Re-auth required after window/tab is hidden for ${
+              blurSecs >= 60 ? `${blurSecs / 60}m` : `${blurSecs}s`
+            }`}
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {blurPresets.map(({ secs, label }) => (
+          <button
+            key={secs}
+            onClick={() => handleBlurChange(secs)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              blurSecs === secs
+                ? "bg-accent-bg text-accent border border-accent/30"
+                : "bg-surface border border-border text-muted hover:text-theme-text hover:border-border-light"
+            }`}
+          >
+            <Timer size={14} />
+            {label}
           </button>
         ))}
       </div>

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes inactivity
-const BLUR_TIMEOUT_MS = 20 * 1000; // 20 seconds when window is blurred / tab hidden
+const DEFAULT_BLUR_SECONDS = 300; // 5 minutes when window is blurred / tab hidden
 const STORAGE_KEY = "aa-timeout-mins";
+const BLUR_STORAGE_KEY = "aa-blur-timeout-secs";
 const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
 
 /**
@@ -45,9 +46,11 @@ export function useSessionTimeout(onTimeout, timeoutMs) {
 
   const startBlurTimer = useCallback(() => {
     clearBlurTimer();
+    const blurMs = getBlurTimeoutSeconds() * 1000;
+    if (blurMs <= 0) return; // 0 disables the blur timer entirely
     blurTimerRef.current = setTimeout(() => {
       onTimeoutRef.current?.();
-    }, BLUR_TIMEOUT_MS);
+    }, blurMs);
   }, [clearBlurTimer]);
 
   useEffect(() => {
@@ -95,6 +98,22 @@ export function hasLiveSessionMarker() {
 
 export function clearLiveSessionMarker() {
   try { sessionStorage.removeItem("aa-session-alive"); } catch {}
+}
+
+/**
+ * Blur-timeout (re-auth required after window/tab is hidden for N seconds).
+ * 0 disables. Default: 300 (5 min).
+ */
+export function getBlurTimeoutSeconds() {
+  try {
+    const stored = localStorage.getItem(BLUR_STORAGE_KEY);
+    if (stored !== null) return Math.max(0, parseInt(stored, 10) || 0);
+  } catch {}
+  return DEFAULT_BLUR_SECONDS;
+}
+
+export function setBlurTimeoutSeconds(secs) {
+  try { localStorage.setItem(BLUR_STORAGE_KEY, String(Math.max(0, secs | 0))); } catch {}
 }
 
 /**
