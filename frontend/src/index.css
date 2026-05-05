@@ -242,7 +242,11 @@ select:not([multiple]) {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
-/* Safe-area insets — iOS PWA / save-to-home-screen support */
+/* Safe-area insets — iOS PWA / save-to-home-screen support
+   Requires `viewport-fit=cover` in <meta name="viewport"> so iOS
+   actually reports the safe-area inset values. We use max() with a
+   floor so the layout still has reasonable breathing room on
+   browsers / contexts where env() resolves to 0. */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -250,13 +254,16 @@ select:not([multiple]) {
   padding-top: env(safe-area-inset-top, 0px);
 }
 .bottom-nav-safe {
-  /* Bottom nav height (4rem = 64px) + iOS home indicator inset */
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 8px);
+  /* Page content reserves enough space to clear the fixed nav.
+     Just nav-height + safe-area; no extra buffer (nav has its own). */
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 .bottom-nav-fixed {
-  /* Lift fixed nav above iOS home indicator */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  /* Lift the fixed nav's icons up off the iOS home indicator.
+     Floor of 14px ensures visible breathing room even when env()
+     resolves to 0 (e.g. desktop browsers, non-PWA Safari). */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 14px);
+  height: calc(4rem + max(env(safe-area-inset-bottom, 0px), 14px));
 }
 
 /* Theme transition for smooth switching */
