@@ -13,7 +13,16 @@ import {
   Wallet,
   PieChart,
 } from "lucide-react";
-import { getAccount, getPositions, getWatchlist, healthCheck, listAccounts, setActiveAccount, getActiveAccountId } from "../services/api";
+import {
+  getAccountForMode,
+  getPositionsForMode,
+  getWatchlist,
+  healthCheck,
+  listAccounts,
+  setActiveAccount,
+  getActiveAccountId,
+} from "../services/api";
+import { useTradingMode } from "../hooks/useTradingMode";
 import PageLoader from "./PageLoader";
 import { useScrollOffset } from "../hooks/useLenis";
 import DotLogo from "./DotLogo";
@@ -22,11 +31,12 @@ import DotWaffle from "./DotWaffle";
 import usePullToRefresh from "../hooks/usePullToRefresh";
 
 export default function Dashboard() {
+  const { mode, isPaper } = useTradingMode();
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
-  const [dataSource, setDataSource] = useState("demo"); // "webull" | "demo"
+  const [dataSource, setDataSource] = useState("demo"); // "webull" | "alpaca" | "demo"
   const [timeRange, setTimeRange] = useState("1M");
   const [activeTab, setActiveTab] = useState("Portfolio");
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -43,20 +53,32 @@ export default function Dashboard() {
   const fetchAll = async () => {
     await Promise.allSettled([
       healthCheck().then(() => setApiConnected(true)).catch(() => setApiConnected(false)),
-      getAccount().then((r) => { setAccount(r.data); setAccountLoading(false); }).catch(() => setAccountLoading(false)),
-      getPositions().then((r) => {
+      getAccountForMode(mode)
+        .then((r) => { setAccount(r.data); setAccountLoading(false); })
+        .catch(() => setAccountLoading(false)),
+      getPositionsForMode(mode).then((r) => {
         setPositions(r.data.positions || []);
         if (r.data.source) setDataSource(r.data.source);
       }),
       getWatchlist().then((r) => setWatchlist(r.data.items || [])),
-      listAccounts().then((r) => setAccounts(r.data.accounts || [])).catch(() => {}),
+      // Webull multi-account picker only matters in live mode; skip in paper
+      isPaper
+        ? Promise.resolve()
+        : listAccounts().then((r) => setAccounts(r.data.accounts || [])).catch(() => {}),
     ]);
     setSwitchingAccount(false);
   };
 
   const { pullRef, pulling, pullDistance, refreshing } = usePullToRefresh(fetchAll);
 
-  useEffect(() => { fetchAll(); }, [activeAccountId]);
+  // Re-fetch on account switch OR trading mode flip
+  useEffect(() => {
+    setAccountLoading(true);
+    setAccount(null);
+    setPositions([]);
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAccountId, mode]);
 
   const handleSelectAccount = (acc) => {
     if (!acc?.account_id) return;
@@ -185,7 +207,17 @@ export default function Dashboard() {
       )}
       {apiConnected && dataSource === "demo" && (
         <div className="mx-4 mb-3 px-3 py-2 rounded-xl bg-bear/10 border border-bear/20 flex items-center gap-2">
-          <span className="text-bear text-xs font-semibold">⚠ Demo data — Webull not connected</span>
+          <span className="text-bear text-xs font-semibold">
+            ⚠ Demo data — {isPaper ? "Alpaca paper" : "Webull"} not connected
+          </span>
+        </div>
+      )}
+      {apiConnected && dataSource === "alpaca" && (
+        <div className="mx-4 mb-3 px-3 py-1.5 rounded-xl bg-accent/10 border border-accent/20 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="text-accent text-[10px] font-medium">
+            Paper · Alpaca {account?.account_number ? `· ${account.account_number}` : ""}
+          </span>
         </div>
       )}
       {apiConnected && dataSource === "webull" && (
@@ -282,7 +314,9 @@ export default function Dashboard() {
             <div className="mx-4 mb-4 rounded-2xl bg-surface border border-border p-6 text-center">
               <div className="text-muted text-sm mb-1">No positions</div>
               <div className="text-muted/60 text-xs">
-                {account?.connected ? "Open a paper trade to get started" : "Connect Webull in Settings"}
+                {account?.connected
+                  ? (isPaper ? "Place a paper trade to get started" : "Open a live trade")
+                  : (isPaper ? "Add ALPACA_API_KEY to .env" : "Connect Webull in Settings")}
               </div>
             </div>
           )}

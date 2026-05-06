@@ -59,6 +59,96 @@ export const getTodayOrders = () => api.get("/trade/orders/today");
 export const getOpenOrders = () => api.get("/trade/orders/open");
 export const getOrderHistory = () => api.get("/trade/history");
 
+// --- Paper Trading (Alpaca) ---
+export const getPaperStatus = () => api.get("/paper/status");
+export const getPaperAccount = () => api.get("/paper/account");
+export const getPaperConfigurations = () => api.get("/paper/configurations");
+export const getPaperPositions = () => api.get("/paper/positions");
+export const getPaperOrders = (status = "all", limit = 100) =>
+  api.get("/paper/orders", { params: { status, limit } });
+export const getPaperOrder = (orderId) => api.get(`/paper/orders/${orderId}`);
+export const placePaperStockOrder = (order) => api.post("/paper/order", order);
+export const placePaperOptionOrder = (order) => api.post("/paper/order/option", order);
+export const cancelPaperOrder = (orderId) => api.delete(`/paper/order/${orderId}`);
+export const findOptionContracts = (req) => api.post("/paper/options/contracts", req);
+
+// --- Settlement (T+1 cash tracking, mirrors live IRA rules) ---
+export const getSettlementState = () => api.get("/paper/settlement/state");
+export const getSettlementLots = (settled) =>
+  api.get("/paper/settlement/lots", { params: settled !== undefined ? { settled } : {} });
+export const getSettlementViolations = () => api.get("/paper/settlement/violations");
+
+// --- Trading Mode (paper vs live) ---
+const TRADING_MODE_KEY = "aa-trading-mode";
+
+export function getTradingMode() {
+  try {
+    return localStorage.getItem(TRADING_MODE_KEY) || "paper";
+  } catch {
+    return "paper";
+  }
+}
+
+export function setTradingMode(mode) {
+  try {
+    localStorage.setItem(TRADING_MODE_KEY, mode);
+  } catch {}
+}
+
+/**
+ * Mode-aware account fetch. Paper response (Alpaca shape) is normalized
+ * to the field names the Dashboard already uses (Webull-style), so the
+ * UI doesn't need to branch on mode.
+ *
+ * Returned shape (both modes):
+ *   account_id, account_type, total_value, buying_power, cash_balance,
+ *   market_value, day_pnl, connected, broker
+ *   + paper-only extras: equity, options_buying_power, options_trading_level,
+ *     account_number, scale_factor, capped, virtual_cap
+ */
+export async function getAccountForMode(mode = getTradingMode()) {
+  if (mode === "live") {
+    const res = await api.get("/trade/account");
+    return { ...res, data: { ...res.data, broker: "webull" } };
+  }
+  const res = await api.get("/paper/account");
+  const d = res.data || {};
+  const dayPnl = typeof d.equity === "number" && typeof d.last_equity === "number"
+    ? d.equity - d.last_equity
+    : 0;
+  return {
+    ...res,
+    data: {
+      ...d,
+      // Field aliases so the Webull-shaped UI keeps working
+      account_id: d.account_number,
+      total_value: d.equity,
+      market_value: d.position_value ?? 0,
+      cash_balance: d.cash,
+      day_pnl: dayPnl,
+    },
+  };
+}
+
+export async function getPositionsForMode(mode = getTradingMode()) {
+  if (mode === "live") return api.get("/trade/positions");
+  const res = await api.get("/paper/positions");
+  // Normalize Alpaca position shape → Webull-ish field names
+  const positions = (res.data?.positions || []).map((p) => ({
+    ...p,
+    unrealized_pnl: p.unrealized_pl,
+    change_pct: p.unrealized_plpc,
+    avg_cost: p.avg_entry_price,
+    price: p.current_price,
+    qty: p.qty,
+    holding_pct: undefined, // Alpaca doesn't return this; computed at display time
+  }));
+  return { ...res, data: { ...res.data, positions, source: "alpaca" } };
+}
+
+export const getOrdersForMode = (mode = getTradingMode()) =>
+  mode === "live" ? api.get("/trade/orders/today") : api.get("/paper/orders");
+
 // --- Watchlist ---
 export const getWatchlist = () => api.get("/trade/watchlist");
 export const addToWatchlist = (item) => api.post("/trade/watchlist", item);

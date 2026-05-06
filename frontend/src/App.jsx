@@ -21,6 +21,8 @@ import SettingsPage from "./components/Settings";
 import Login from "./components/Login";
 import PageLoader from "./components/PageLoader";
 import { ThemeProvider } from "./hooks/useTheme";
+import { TradingModeProvider } from "./hooks/useTradingMode";
+import TradingModeToggle from "./components/TradingModeToggle";
 import { useSessionTimeout, hasLiveSessionMarker, clearLiveSessionMarker } from "./hooks/useSessionTimeout";
 import { useLenisGlobal } from "./hooks/useLenis";
 import { checkSession, checkSetup, logout } from "./services/passkey";
@@ -90,12 +92,9 @@ function AuthenticatedApp({ onLogout }) {
           </NavLink>
         ))}
 
-        {/* Paper trading badge */}
-        <div className="mt-auto pt-4 border-t border-border">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent-bg text-accent text-xs font-bold tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            PAPER MODE
-          </div>
+        {/* Trading mode toggle — paper (Alpaca) vs live (Webull, kill-switched) */}
+        <div className="mt-auto pt-4 border-t border-border flex justify-center">
+          <TradingModeToggle />
         </div>
       </nav>
 
@@ -215,7 +214,9 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <AuthenticatedApp onLogout={handleLogout} />
+      <TradingModeProvider>
+        <AuthenticatedApp onLogout={handleLogout} />
+      </TradingModeProvider>
     </ThemeProvider>
   );
 }

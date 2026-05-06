@@ -46,7 +46,20 @@ def _rp_id(request: Request) -> str:
     return host.split(":")[0]
 
 def _rp_origin(request: Request) -> str:
-    """Build expected origin from request."""
+    """Build expected origin for WebAuthn verification.
+
+    Prefers the browser's Origin header (where the JS is actually running)
+    over the Host header. This matters in dev: Vite proxies API calls from
+    localhost:5173 → localhost:8000 with `changeOrigin: true`, which
+    rewrites Host to 8000. The Origin header still reflects 5173 — and
+    that's what the browser baked into the credential's clientDataJSON.
+
+    Trusting Origin here is safe because CORS already gates which origins
+    can talk to us (see ALLOWED_ORIGINS in .env).
+    """
+    origin = request.headers.get("origin")
+    if origin:
+        return origin
     scheme = request.headers.get("x-forwarded-proto", "https" if get_settings().is_production else "http")
     host = request.headers.get("host", "localhost:8000")
     return f"{scheme}://{host}"

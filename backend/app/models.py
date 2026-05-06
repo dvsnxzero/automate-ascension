@@ -155,6 +155,52 @@ class TradeLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class SettlementLot(Base):
+    """
+    T+1 settlement tracking for paper trades. Mirrors Webull Roth IRA cash
+    settlement rules — sell proceeds are unsettled until next trading day.
+
+    Each FILL becomes a row. Sell fills produce positive `proceeds` (cash
+    coming in, unsettled until `settles_at`). Buy fills produce negative
+    proceeds (cash leaves immediately) and may flag `funded_by_unsettled`
+    when the buy's cash demand exceeds prior settled cash.
+
+    Used to derive: settled_cash, unsettled_cash, Good Faith Violations,
+    Free Riding Violations.
+    """
+    __tablename__ = "settlement_lots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Link to the alpaca order that produced this fill
+    order_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    client_order_id: Mapped[str | None] = mapped_column(String(64))
+    # What & when
+    symbol: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    asset_class: Mapped[str | None] = mapped_column(String(20))  # us_equity / us_option / crypto
+    side: Mapped[str] = mapped_column(String(4), nullable=False)  # buy / sell
+    qty: Mapped[float] = mapped_column(Float, nullable=False)
+    fill_price: Mapped[float] = mapped_column(Float, nullable=False)
+    # Cash impact: positive = cash in (sell), negative = cash out (buy)
+    proceeds: Mapped[float] = mapped_column(Float, nullable=False)
+    # T+1 settlement
+    executed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    settles_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    is_settled: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # Violation tracking flags
+    funded_by_unsettled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # If a sell-side lot was created from shares that were *bought* with unsettled
+    # funds and then sold before the original sell settled → Good Faith Violation
+    triggers_gfv: Mapped[bool] = mapped_column(Boolean, default=False)
+    gfv_note: Mapped[str | None] = mapped_column(Text)
+    # Account context
+    is_paper: Mapped[bool] = mapped_column(Boolean, default=True)
+    broker: Mapped[str] = mapped_column(String(20), default="alpaca")
+    account_number: Mapped[str | None] = mapped_column(String(40))
+    # Audit
+    raw_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class DailyBalance(Base):
     """End-of-day account balance snapshot."""
     __tablename__ = "daily_balance"
