@@ -151,10 +151,15 @@ async def place_order(order: OrderRequest):
     Safety: defaults to paper trading. Live trading requires explicit is_paper=False.
     """
     if not order.is_paper:
-        return {
-            "error": "Live trading is disabled. Set is_paper=True for paper trading.",
-            "placed": False,
-        }
+        # Hard kill switch — env var must be true AND the request must opt in.
+        from app.config import get_settings
+        if not get_settings().enable_live_trading:
+            return {
+                "error": "Live trading is disabled. Set ENABLE_LIVE_TRADING=true in .env to unlock.",
+                "placed": False,
+            }
+        # Live trading reaches the Webull live brokerage. For paper trading,
+        # use POST /api/paper/order (Alpaca) instead.
 
     wb = _get_client()
     if not wb:

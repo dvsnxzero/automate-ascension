@@ -160,37 +160,70 @@ def _scrape_reddit(db):
 
 
 def _scrape_balance(db):
-    """Take an initial balance snapshot from Webull if available."""
+    """Take an initial daily balance snapshot.
+
+    Prefers Alpaca paper (since that's our active trading account post-2026-05).
+    Falls back to Webull live data (read-only) if Alpaca isn't configured.
+    """
     try:
-        from app.webull_client import get_webull
-        from app.config import get_settings
-
-        settings = get_settings()
-        if not settings.webull_app_key or not settings.webull_app_secret:
-            logger.info("Seed: no Webull credentials — skipping balance snapshot.")
-            return
-
-        wb = get_webull()
-        account = wb.get_account()
-        if not account:
-            logger.info("Seed: could not fetch Webull account — skipping balance.")
-            return
-
         today = datetime.utcnow().strftime("%Y-%m-%d")
         existing = db.query(DailyBalance).filter(DailyBalance.date == today).first()
         if existing:
             logger.info("Seed: balance snapshot already exists for today.")
             return
 
-        total_value = float(account.get("totalMarketValue", 0) or 0)
-        cash = float(account.get("usableCash", 0) or 0)
+        from app.config import get_settings
+        settings = get_settings()
+
+        # ── Prefer Alpaca paper ────────────────────────────────
+        if settings.alpaca_api_key and settings.alpaca_api_secret \
+                and not settings.alpaca_api_key.startswith("PASTE_"):
+            try:
+                from app.alpaca_client import get_alpaca
+                al = get_alpaca()
+                acct = al.get_account()
+                if isinstance(acct, dict) and not acct.get("error"):
+                    total_value = float(acct.get("equity") or 0)
+                    cash = float(acct.get("cash") or 0)
+                    last_equity = float(acct.get("last_equity") or 0)
+                    db.add(DailyBalance(
+                        date=today,
+                        total_value=total_value,
+                        cash=cash,
+                        buying_power=float(acct.get("buying_power") or 0),
+                        day_pnl=total_value - last_equity if last_equity else 0,
+                        is_paper=True,
+                        raw_json={"broker": "alpaca", "account_number": acct.get("account_number")},
+                    ))
+                    db.commit()
+                    logger.info(f"Seed: snapshotted Alpaca paper balance for {today} — equity ${total_value:,.2f}")
+                    return
+            except Exception as e:
+                logger.warning(f"Seed: Alpaca balance snapshot failed: {e} — trying Webull next.")
+
+        # ── Fall back to Webull ────────────────────────────────
+        if not settings.webull_app_key or not settings.webull_app_secret:
+            logger.info("Seed: no broker credentials — skipping balance snapshot.")
+            return
+
+        from app.webull_client import get_webull
+        wb = get_webull()
+        account = wb.get_balance()  # correct method name on the Webull client
+        if not account or (isinstance(account, dict) and account.get("error")):
+            logger.info("Seed: could not fetch Webull balance — skipping snapshot.")
+            return
+
+        # Webull's get_balance() returns a different shape than the legacy
+        # `get_account()` this function originally expected.
+        total_value = float(account.get("total_asset", 0) or 0)
+        cash = float(account.get("total_cash_balance", 0) or 0)
 
         db.add(DailyBalance(
             date=today,
             total_value=total_value,
             cash=cash,
-            buying_power=float(account.get("dayBuyingPower", 0) or 0),
-            day_pnl=float(account.get("dayProfitLoss", 0) or 0),
+            buying_power=float(account.get("total_cash_balance", 0) or 0),
+            day_pnl=0,  # not directly in /account/balance
             is_paper=account.get("isPaper", True),
             raw_json=account,
         ))
@@ -202,29 +235,49 @@ def _scrape_balance(db):
 
 
 def _background_seed():
-    """Run all scraping seeds in a background thread with its own DB session."""
+    """Run all scraping seeds in a background thread with its own DB session.
+
+    Each seed step is gated by a config flag (SEED_NEWS, SEED_REDDIT,
+    SEED_BALANCE). Reddit's public JSON endpoints have been blocking
+    unauthenticated traffic since 2024 and Finnhub fails without a key,
+    so news + reddit are OFF by default to keep startup logs clean.
+    """
+    from app.config import get_settings
+    settings = get_settings()
+
     db = SessionLocal()
     try:
-        # News first (fast — single API call to Finnhub)
-        news_empty = db.query(NewsArticle).count() == 0
-        if news_empty:
-            _scrape_news(db)
+        # News (Finnhub, requires FINNHUB_API_KEY)
+        if settings.seed_news:
+            news_empty = db.query(NewsArticle).count() == 0
+            if news_empty:
+                _scrape_news(db)
+            else:
+                logger.info("Seed: news_articles already has data — skipping.")
         else:
-            logger.info("Seed: news_articles already has data — skipping.")
+            logger.info("Seed: news disabled (set SEED_NEWS=true to enable).")
 
-        # Reddit (slower — hits multiple subreddits)
-        reddit_empty = db.query(RedditPost).count() == 0
-        if reddit_empty:
-            _scrape_reddit(db)
+        # Reddit (public JSON, currently blocked for unauthenticated clients)
+        if settings.seed_reddit:
+            reddit_empty = db.query(RedditPost).count() == 0
+            if reddit_empty:
+                _scrape_reddit(db)
+            else:
+                logger.info("Seed: reddit_posts already has data — skipping.")
         else:
-            logger.info("Seed: reddit_posts already has data — skipping.")
+            logger.info("Seed: reddit disabled (set SEED_REDDIT=true to enable).")
 
-        # Balance snapshot
-        balance_empty = db.query(DailyBalance).count() == 0
-        if balance_empty:
-            _scrape_balance(db)
+        # Daily balance snapshot (Alpaca paper preferred, Webull fallback)
+        if settings.seed_balance:
+            balance_empty = db.query(DailyBalance).filter(
+                DailyBalance.date == datetime.utcnow().strftime("%Y-%m-%d")
+            ).count() == 0
+            if balance_empty:
+                _scrape_balance(db)
+            else:
+                logger.info("Seed: daily_balance already has today's snapshot — skipping.")
         else:
-            logger.info("Seed: daily_balance already has data — skipping.")
+            logger.info("Seed: balance snapshot disabled.")
 
         logger.info("Seed: background seeding complete.")
     except Exception as e:
