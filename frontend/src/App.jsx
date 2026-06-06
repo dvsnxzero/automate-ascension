@@ -9,6 +9,7 @@ import {
   BookOpen,
   Settings,
   Radar,
+  Send,
 } from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import ChartView from "./components/ChartView";
@@ -18,6 +19,7 @@ import Journal from "./components/Journal";
 import BacktestLab from "./components/BacktestLab";
 import IntelPage from "./components/IntelPage";
 import SettingsPage from "./components/Settings";
+import Trade from "./components/Trade";
 import Login from "./components/Login";
 import PageLoader from "./components/PageLoader";
 import { ThemeProvider } from "./hooks/useTheme";
@@ -29,6 +31,7 @@ import { checkSession, checkSetup, logout } from "./services/passkey";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Home" },
+  { to: "/trade", icon: Send, label: "Trade" },
   { to: "/chart", icon: BarChart3, label: "Chart" },
   { to: "/scanner", icon: ScanSearch, label: "Scan" },
   { to: "/journal", icon: ClipboardList, label: "Journal" },
@@ -38,9 +41,10 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
-// Mobile bottom nav — show these 6 items (skip Lab and Notes, accessible from sidebar on desktop)
+// Mobile bottom nav — primary actions only (Lab/Notes accessible from sidebar on desktop)
 const mobileNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Home" },
+  { to: "/trade", icon: Send, label: "Trade" },
   { to: "/chart", icon: BarChart3, label: "Chart" },
   { to: "/scanner", icon: ScanSearch, label: "Scan" },
   { to: "/journal", icon: ClipboardList, label: "Journal" },
@@ -102,6 +106,7 @@ function AuthenticatedApp({ onLogout }) {
       <main className="flex-1 overflow-x-hidden overflow-y-auto min-w-0">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/trade" element={<Trade />} />
           <Route path="/chart" element={<ChartView />} />
           <Route path="/chart/:symbol" element={<ChartView />} />
           <Route path="/scanner" element={<ScannerPanel />} />
