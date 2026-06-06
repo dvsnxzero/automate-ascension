@@ -219,10 +219,20 @@ _YAHOO_INTERVAL = {
     "1d": "1d", "1w": "1wk",
 }
 
-# Yahoo range mapping (how far back to fetch)
+# Yahoo range mapping (how far back to fetch).
+# Sized to give each interval *enough* bars to be analytically useful — a
+# trader on the 15m chart wants weeks of context, not five days. The bars are
+# trimmed to `count` on the way out, so over-fetching is cheap. Yahoo hard
+# limits: 1m≤7d, 5m/15m/30m≤60d, 1h≤730d, 1d/1w unlimited.
 _YAHOO_RANGE = {
-    "1m": "1d", "5m": "5d", "15m": "5d", "30m": "1mo",
-    "1h": "6mo", "4h": "6mo", "1d": "1y", "1w": "5y",
+    "1m": "5d",      # ~1,950 1m bars (5 trading days of intraday context)
+    "5m": "1mo",     # ~1,700 5m bars (~22 trading days)
+    "15m": "3mo",    # ~1,700 15m bars (~3 months, well under the 60d cap when trimmed)
+    "30m": "3mo",
+    "1h": "1y",      # ~1,750 1h bars (~1 year of hourly context)
+    "4h": "2y",
+    "1d": "2y",      # 504 daily bars (trimmed to count, default 252 = 1y)
+    "1w": "5y",      # 260 weekly bars
 }
 
 

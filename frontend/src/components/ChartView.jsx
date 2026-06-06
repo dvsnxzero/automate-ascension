@@ -6,9 +6,28 @@ import { useTheme } from "../hooks/useTheme";
 import DotLogo from "./DotLogo";
 import DotChart from "./DotChart";
 import PageLoader from "./PageLoader";
+import TradePanel from "./TradePanel";
 
 const DEFAULT_SYMBOL = "SPY";
 const DEFAULT_INTERVAL = "5m";
+
+// Per-interval bar count — sized so each timeframe shows a meaningful window
+// of price action, not just the last few sessions. Picked to roughly match the
+// "1d shows ~1y" density the user expects.
+//   1m → ~1.5 trading days   (intraday + previous close context)
+//   5m → ~10 trading days    (~2 weeks)
+//   15m → ~20 trading days   (~1 month)
+//   1h  → ~70 trading days   (~3 months)
+//   1d  → 252 bars            (~1 year, current behavior)
+//   1w  → 260 bars            (~5 years)
+const BAR_COUNT_BY_INTERVAL = {
+  "1m": 600,
+  "5m": 780,
+  "15m": 520,
+  "1h": 500,
+  "1d": 252,
+  "1w": 260,
+};
 
 // Read CSS variable as a hex/rgb string
 function cssVar(name) {
@@ -163,7 +182,7 @@ export default function ChartView() {
         let bars = null;
         let barSource = "demo";
         try {
-          const res = await getBars(symbol, interval);
+          const res = await getBars(symbol, interval, BAR_COUNT_BY_INTERVAL[interval] ?? 200);
           if (cancelled) return;
           if (res.data.bars && res.data.bars.length > 0) {
             bars = res.data.bars;
@@ -614,9 +633,10 @@ export default function ChartView() {
         </div>
       </div>
 
-      {/* Chart + indicators */}
+      {/* Chart + indicators + trade panel */}
       <div className="flex-1 px-4 md:px-8 pt-4 min-w-0">
-        <div className="max-w-[1800px] mx-auto">
+        <div className="max-w-[1800px] mx-auto lg:flex lg:gap-6 lg:items-start">
+          <div className="flex-1 min-w-0">
           {/* Data source badge */}
           {dataSource === "demo" && (
             <div className="mb-3 px-3 py-2 rounded-lg bg-bear/10 border border-bear/20 text-bear text-xs font-semibold inline-flex items-center gap-2">
@@ -672,6 +692,20 @@ export default function ChartView() {
               <MACDPanel bars={rawBars} />
             </div>
           )}
+          </div>
+
+          {/* Trade panel — right column on lg+, stacked below on mobile */}
+          <aside className="mt-4 lg:mt-0 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-32">
+            <TradePanel
+              symbol={symbol}
+              currentPrice={priceInfo.price}
+              onOrderPlaced={() => {
+                // Optional: trigger any refresh hooks if positions are shown
+                // elsewhere on the page. For now, the panel itself refreshes
+                // buying power.
+              }}
+            />
+          </aside>
         </div>
       </div>
     </div>
