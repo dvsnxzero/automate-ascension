@@ -27,6 +27,7 @@ import {
   updateTrade,
 } from "../services/api";
 import DotCalendar from "./DotCalendar";
+import SettlementWidget from "./SettlementWidget";
 
 /* ────────────────────────────────
    Mini balance chart (SVG)
@@ -605,6 +606,11 @@ export default function Journal() {
             Log Trade
           </button>
         </div>
+      </div>
+
+      {/* Settlement state — always visible (independent of trade journal data) */}
+      <div className="mb-5">
+        <SettlementWidget />
       </div>
 
       {/* Data source badge */}
