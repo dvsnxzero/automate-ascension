@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from sqlalchemy.exc import OperationalError
 
 from app.config import get_settings
 from app.database import engine, Base
@@ -82,11 +83,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables then seed empty ones
-    Base.metadata.create_all(bind=engine)
+    # In production, alembic owns the schema (preDeployCommand: alembic upgrade head).
+    # In dev, create_all is a convenience so a fresh SQLite file boots without migrations.
+    settings = get_settings()
+    if settings.environment != "production":
+        Base.metadata.create_all(bind=engine)
+    else:
+        # Tolerate Railway's IPv6 private network not being ready on cold start.
+        for attempt in range(10):
+            try:
+                with engine.connect():
+                    break
+            except OperationalError:
+                if attempt == 9:
+                    raise
+                time.sleep(2)
     run_startup_seed()
     yield
-    # Shutdown: cleanup if needed
 
 
 app = FastAPI(
