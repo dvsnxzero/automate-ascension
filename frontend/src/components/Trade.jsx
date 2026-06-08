@@ -19,6 +19,7 @@ import {
 } from "../services/api";
 import { useTradingMode } from "../hooks/useTradingMode";
 import PageLoader from "./PageLoader";
+import RunnerPanel from "./RunnerPanel";
 
 /* ────────────────────────────────
    Helpers
@@ -315,6 +316,9 @@ export default function Trade() {
           </div>
         </div>
       )}
+
+      {/* Strategy runner — automated paper execution */}
+      {isPaper && <RunnerPanel />}
 
       {/* Buying power card */}
       <section className="card p-5 mb-5">

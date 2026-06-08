@@ -78,6 +78,15 @@ export const getSettlementLots = (settled) =>
   api.get("/paper/settlement/lots", { params: settled !== undefined ? { settled } : {} });
 export const getSettlementViolations = () => api.get("/paper/settlement/violations");
 
+// --- Runner (live paper-execution engine) ---
+export const getRunnerStatus = () => api.get("/runner/status");
+export const startRunner = (cfg = {}) => api.post("/runner/start", cfg);
+export const stopRunner = () => api.post("/runner/stop");
+export const runnerTickOnce = () => api.post("/runner/tick");
+
+// --- Backtest strategy list (for runner dropdown) ---
+export const listStrategies = () => api.get("/backtest/strategies");
+
 // --- Trading Mode (paper vs live) ---
 const TRADING_MODE_KEY = "aa-trading-mode";
 
