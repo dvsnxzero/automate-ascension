@@ -23,6 +23,7 @@ from app.intel.routes import router as intel_router
 from app.notes.routes import router as notes_router
 from app.backtest.routes import router as backtest_router
 from app.paper.routes import router as paper_router
+from app.runner.routes import router as runner_router
 # Import models so they register on Base.metadata before create_all runs
 from app.backtest import models as _backtest_models  # noqa: F401
 
@@ -145,6 +146,7 @@ app.include_router(intel_router, prefix="/api/intel", tags=["intel"])
 app.include_router(notes_router, prefix="/api/notes", tags=["notes"])
 app.include_router(backtest_router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(paper_router, prefix="/api/paper", tags=["paper"])
+app.include_router(runner_router, prefix="/api/runner", tags=["runner"])
 
 
 # ─── Build version ───
