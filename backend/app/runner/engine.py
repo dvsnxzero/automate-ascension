@@ -76,8 +76,12 @@ class RunnerEngine:
         self.watchlist: list[str] = list(MAG_7)
         self.strategy_id: str = "sma_crossover"
         self.params: dict[str, Any] = {}
-        self.bar_interval: str = "1h"
-        self.poll_seconds: int = 15 * 60
+        # 15min bars give ZipTrader 05-02 (9-SMA price strength) enough
+        # density to fire signals during a single session while staying
+        # below Yahoo's 60d intraday data window. Poll every 5min so the
+        # log fills up visibly while testing.
+        self.bar_interval: str = "15m"
+        self.poll_seconds: int = 5 * 60
         self.last_tick: Optional[str] = None
         self.last_error: Optional[str] = None
         self.log: deque = deque(maxlen=200)

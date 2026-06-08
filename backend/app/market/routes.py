@@ -225,10 +225,10 @@ _YAHOO_INTERVAL = {
 # trimmed to `count` on the way out, so over-fetching is cheap. Yahoo hard
 # limits: 1m≤7d, 5m/15m/30m≤60d, 1h≤730d, 1d/1w unlimited.
 _YAHOO_RANGE = {
-    "1m": "5d",      # ~1,950 1m bars (5 trading days of intraday context)
+    "1m": "5d",      # ~1,950 1m bars (5 trading days; 7d hard cap)
     "5m": "1mo",     # ~1,700 5m bars (~22 trading days)
-    "15m": "3mo",    # ~1,700 15m bars (~3 months, well under the 60d cap when trimmed)
-    "30m": "3mo",
+    "15m": "60d",    # max — Yahoo caps 15m at 60 days. ~1,560 bars.
+    "30m": "60d",    # max — Yahoo caps 30m at 60 days. ~780 bars.
     "1h": "1y",      # ~1,750 1h bars (~1 year of hourly context)
     "4h": "2y",
     "1d": "2y",      # 504 daily bars (trimmed to count, default 252 = 1y)
