@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     # real-money order placement via the Webull client. Default OFF.
     enable_live_trading: bool = False
 
+    # Tax-aware order guardrails (US taxable account assumptions).
+    # The runner uses these to deny/resist trades whose after-tax edge is
+    # too thin to justify the risk. Tweak in .env to match your bracket.
+    short_term_tax_rate: float = 0.24      # ordinary income — held ≤365d
+    long_term_tax_rate: float = 0.15       # capital gains — held >365d
+    state_tax_rate: float = 0.0            # add state bite (e.g. 0.09 for CA)
+    min_after_tax_edge_pct: float = 1.0    # block sells with net P&L below this
+    wash_sale_window_days: int = 30        # don't rebuy a loss-sold name in this window
+    pdt_enforcement: bool = True           # set false if your account/jurisdiction allows
+    pdt_equity_floor: float = 25_000.0     # PDT designation threshold
+
     # Database
     database_url: str = "postgresql://ziptrader:localdev@localhost:5432/ziptrader"
 

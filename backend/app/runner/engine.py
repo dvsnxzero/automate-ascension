@@ -23,6 +23,7 @@ import pandas as pd
 from app.alpaca_client import get_alpaca
 from app.backtest.strategies import get_strategy
 from app.market.routes import _yahoo_bars
+from app.runner import tax_rules
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,24 @@ logger = logging.getLogger(__name__)
 # would need pytz/zoneinfo, but for paper testing on Mag 7 a fixed
 # offset is fine — at worst the runner is off by an hour twice a year.
 _ET_OFFSET = timedelta(hours=-4)
+
+
+def _days_since(iso_or_dt) -> int:
+    """Best-effort holding-period days from an ISO timestamp or datetime.
+    Returns 0 when missing so the engine falls into the short-term branch
+    (the safer assumption for tax math)."""
+    if not iso_or_dt:
+        return 0
+    if isinstance(iso_or_dt, str):
+        try:
+            dt = datetime.fromisoformat(iso_or_dt.replace("Z", "+00:00"))
+        except ValueError:
+            return 0
+    else:
+        dt = iso_or_dt
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return max(0, (datetime.now(timezone.utc) - dt).days)
 
 
 def _is_rth(now_utc: Optional[datetime] = None) -> bool:
@@ -88,6 +107,7 @@ class RunnerEngine:
         return {"stopped": True, "status": self.status}
 
     def get_status(self) -> dict:
+        cfg = tax_rules.TaxConfig.from_settings()
         return {
             "status": self.status,
             "strategy_id": self.strategy_id,
@@ -98,6 +118,15 @@ class RunnerEngine:
             "last_error": self.last_error,
             "is_rth": _is_rth(),
             "log": list(self.log)[-50:],
+            "guardrails": {
+                "short_term_rate": cfg.short_term_rate,
+                "long_term_rate": cfg.long_term_rate,
+                "state_rate": cfg.state_rate,
+                "min_after_tax_edge_pct": cfg.min_after_tax_edge_pct,
+                "wash_sale_window_days": cfg.wash_sale_window_days,
+                "pdt_enforcement": cfg.pdt_enforcement,
+                "pdt_equity_floor": cfg.pdt_equity_floor,
+            },
         }
 
     # ── core loop ──
@@ -134,28 +163,54 @@ class RunnerEngine:
             return
 
         positions = al.get_positions() or []
-        held: dict[str, float] = {
-            p["symbol"]: float(p.get("qty") or 0)
+        held: dict[str, dict] = {
+            p["symbol"]: {
+                "qty": float(p.get("qty") or 0),
+                "avg_entry_price": float(p.get("avg_entry_price") or 0),
+                "entry_date": p.get("entry_date") or p.get("created_at"),
+            }
             for p in positions if float(p.get("qty") or 0) > 0
         }
 
         acct = al.get_account() or {}
         bp = float(acct.get("buying_power") or 0)
+        equity = float(acct.get("equity") or 0)
         per_slot = bp / max(1, len(self.watchlist))
 
+        # Pull closed orders once per tick — used for wash-sale + PDT checks
+        closed_orders = self._fetch_closed_orders(al)
+
+        cfg = tax_rules.TaxConfig.from_settings()
+
         for symbol in self.watchlist:
-            await self._evaluate_symbol(symbol, strategy, held, per_slot, al)
+            await self._evaluate_symbol(
+                symbol, strategy, held, per_slot, al,
+                closed_orders=closed_orders, equity=equity, cfg=cfg,
+            )
 
         self.last_tick = datetime.now(timezone.utc).isoformat()
+
+    def _fetch_closed_orders(self, al) -> list[dict]:
+        try:
+            orders = al.get_orders(status="closed", limit=200) or []
+            return [o for o in orders if isinstance(o, dict)]
+        except Exception as e:
+            self._log(f"closed orders fetch failed: {e}")
+            return []
 
     async def _evaluate_symbol(
         self,
         symbol: str,
         strategy,
-        held: dict[str, float],
+        held: dict[str, dict],
         per_slot: float,
         al,
+        closed_orders: list[dict] | None = None,
+        equity: float = 0.0,
+        cfg: "tax_rules.TaxConfig | None" = None,
     ) -> None:
+        closed_orders = closed_orders or []
+        cfg = cfg or tax_rules.TaxConfig.from_settings()
         try:
             bars_raw = await _yahoo_bars(symbol, self.bar_interval, 300)
         except Exception as e:
@@ -187,6 +242,19 @@ class RunnerEngine:
             return  # already acted on this bar
 
         if sig_val == 1 and symbol not in held:
+            # Wash-sale guard — block a buy if we recently sold this name at a loss
+            ws = tax_rules.evaluate_buy_wash_sale(symbol, closed_orders, cfg)
+            if not ws["allow"]:
+                self._log(f"{symbol}: BUY blocked — {ws['reason']}")
+                self.last_signal_bar[symbol] = bar_ts
+                return
+            # PDT guard — only matters if equity < floor
+            pdt = tax_rules.evaluate_pdt(equity, closed_orders, is_opening_trade=True, cfg=cfg)
+            if not pdt["allow"]:
+                self._log(f"{symbol}: BUY blocked — {pdt['reason']}")
+                self.last_signal_bar[symbol] = bar_ts
+                return
+
             shares = int(per_slot / last_price) if last_price > 0 else 0
             if shares < 1:
                 self._log(f"{symbol}: BUY signal but slot too small (${per_slot:.0f} / ${last_price:.2f})")
@@ -204,9 +272,21 @@ class RunnerEngine:
             self.last_signal_bar[symbol] = bar_ts
 
         elif sig_val == -1 and symbol in held:
-            qty = int(held[symbol])
+            pos = held[symbol]
+            qty = int(pos["qty"])
             if qty < 1:
                 return
+            entry_price = pos["avg_entry_price"] or last_price
+            held_days = _days_since(pos.get("entry_date"))
+            tax = tax_rules.evaluate_sell(entry_price, last_price, qty, held_days, cfg)
+            if not tax["allow"]:
+                self._log(
+                    f"{symbol}: SELL deferred — {tax['reason']} "
+                    f"(gross {tax.get('gross_pnl_pct')}% / net {tax.get('net_pnl_pct')}% @ {tax.get('term')}-term)"
+                )
+                self.last_signal_bar[symbol] = bar_ts
+                return
+
             res = al.place_stock_order(
                 symbol=symbol, side="sell", qty=qty,
                 order_type="limit",
@@ -215,7 +295,8 @@ class RunnerEngine:
             )
             status = res.get("status") if isinstance(res, dict) else res
             err = res.get("error") if isinstance(res, dict) else None
-            self._log(f"{symbol}: SELL {qty} @ ~${last_price:.2f} → {err or status}")
+            tax_note = f" [{tax.get('term','?')}-term, net {tax.get('net_pnl_pct')}%]" if tax.get("is_gain") else ""
+            self._log(f"{symbol}: SELL {qty} @ ~${last_price:.2f}{tax_note} → {err or status}")
             self.last_signal_bar[symbol] = bar_ts
 
     # ── log helper ──
